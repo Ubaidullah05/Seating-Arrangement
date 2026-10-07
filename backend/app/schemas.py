@@ -45,6 +45,7 @@ class UploadPreviewResponse(BaseModel):
     invalid_rows: List[InvalidRow]
     duplicate_rows: List[DuplicateRow]
     valid_preview: List[StudentBase]
+    all_valid: Optional[List[StudentBase]] = None
 
 class UploadCommitRequest(BaseModel):
     students: List[StudentCreate]

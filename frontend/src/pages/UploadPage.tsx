@@ -10,7 +10,8 @@ import {
   XCircle, 
   Info,
   Trash2,
-  ArrowRight
+  ArrowRight,
+  Download
 } from "lucide-react";
 
 export const UploadPage: React.FC = () => {
@@ -18,6 +19,7 @@ export const UploadPage: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<UploadPreviewResponse | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [showColumnsGuide, setShowColumnsGuide] = useState<boolean>(true);
 
   // Upload & preview mutation
   const uploadMutation = useMutation({
@@ -54,6 +56,16 @@ export const UploadPage: React.FC = () => {
     },
   });
 
+  const handleDownloadTemplate = () => {
+    const templateUrl = api.getTemplateDownloadUrl();
+    const link = document.createElement("a");
+    link.href = templateUrl;
+    link.setAttribute("download", "candidate_register_template.xlsx");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -65,8 +77,13 @@ export const UploadPage: React.FC = () => {
   };
 
   const handleCommit = () => {
-    if (previewData && previewData.valid_preview) {
-      commitMutation.mutate(previewData.valid_preview);
+    if (previewData) {
+      const candidates = (previewData.all_valid && previewData.all_valid.length > 0)
+        ? previewData.all_valid
+        : previewData.valid_preview;
+      if (candidates && candidates.length > 0) {
+        commitMutation.mutate(candidates);
+      }
     }
   };
 
@@ -80,17 +97,237 @@ export const UploadPage: React.FC = () => {
             Upload candidate files (.xlsx or .csv) for examination allocation
           </div>
         </div>
-        <button
-          onClick={() => {
-            if (confirm("Are you sure you want to clear all candidate records? This will also remove any previous allocations.")) {
-              clearMutation.mutate();
-            }
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <button
+            onClick={handleDownloadTemplate}
+            className="btn-gold"
+            title="Download pre-formatted XLSX candidate template with 16-digit text format"
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+          >
+            <Download size={15} /> Download Template (.xlsx)
+          </button>
+          <button
+            onClick={() => {
+              if (confirm("Are you sure you want to clear all candidate records? This will also remove any previous allocations.")) {
+                clearMutation.mutate();
+              }
+            }}
+            className="btn-outline"
+            style={{ color: "#b91c1c", borderColor: "#fca5a5" }}
+          >
+            <Trash2 size={15} /> Clear All Students
+          </button>
+        </div>
+      </div>
+
+      {/* Template Guide & Required Columns Card */}
+      <div
+        style={{
+          backgroundColor: "#ffffff",
+          border: "1px solid #d8e2ec",
+          borderRadius: "6px",
+          padding: "20px 24px",
+          marginBottom: "24px",
+          boxShadow: "0 2px 6px rgba(0, 31, 71, 0.04)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: showColumnsGuide ? "16px" : "0",
           }}
-          className="btn-outline"
-          style={{ color: "#b91c1c", borderColor: "#fca5a5" }}
         >
-          <Trash2 size={15} /> Clear All Students
-        </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div
+              style={{
+                width: "36px",
+                height: "36px",
+                borderRadius: "6px",
+                backgroundColor: "#f0f7ff",
+                color: "#0050b3",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <FileSpreadsheet size={20} />
+            </div>
+            <div>
+              <div style={{ fontFamily: "'Georgia', serif", fontSize: "15px", fontWeight: 700, color: "#002f66" }}>
+                Excel Template Required & Supported Columns
+              </div>
+              <div style={{ fontSize: "12px", color: "#64748b" }}>
+                Use the official .xlsx template with text-formatted cells for 16-digit register numbers
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <button
+              onClick={handleDownloadTemplate}
+              className="btn-blue"
+              style={{ fontSize: "12px", padding: "6px 14px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+            >
+              <Download size={14} /> Download Template (.xlsx)
+            </button>
+            <button
+              onClick={() => setShowColumnsGuide(!showColumnsGuide)}
+              className="btn-outline"
+              style={{ fontSize: "12px", padding: "6px 12px" }}
+            >
+              {showColumnsGuide ? "Hide Guide" : "Show Columns Guide"}
+            </button>
+          </div>
+        </div>
+
+        {showColumnsGuide && (
+          <div>
+            <table className="portal-table" style={{ fontSize: "12px", marginTop: "12px" }}>
+              <thead>
+                <tr>
+                  <th style={{ width: "170px" }}>Column Name</th>
+                  <th style={{ width: "130px" }}>Requirement</th>
+                  <th style={{ width: "230px" }}>Accepted Header Aliases</th>
+                  <th style={{ width: "150px" }}>Data Type / Rule</th>
+                  <th>Description / Example</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ backgroundColor: "#fefefe" }}>
+                  <td style={{ fontWeight: 700, color: "#002f66" }}>Register Number</td>
+                  <td>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        backgroundColor: "#fee2e2",
+                        color: "#991b1b",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: "3px",
+                        letterSpacing: "0.5px"
+                      }}
+                    >
+                      REQUIRED (*)
+                    </span>
+                  </td>
+                  <td className="font-mono" style={{ fontSize: "11px", color: "#475569" }}>
+                    Register Number, Reg No, register_no, regno, registration number
+                  </td>
+                  <td>
+                    <span className="font-mono" style={{ fontWeight: 600, color: "#b91c1c" }}>
+                      Text (@) — 16 digits
+                    </span>
+                  </td>
+                  <td style={{ color: "#334155" }}>
+                    Exact 16-digit numeric string (e.g. <code className="font-mono" style={{ fontWeight: 700 }}>2403310910421001</code>). Format cell as Text to prevent 15-digit Excel truncation.
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ fontWeight: 600, color: "#334155" }}>Student Name</td>
+                  <td>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        backgroundColor: "#f0fdf4",
+                        color: "#166534",
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        padding: "2px 8px",
+                        borderRadius: "3px"
+                      }}
+                    >
+                      Optional
+                    </span>
+                  </td>
+                  <td className="font-mono" style={{ fontSize: "11px", color: "#475569" }}>
+                    Student Name, Name, student_name, candidate name
+                  </td>
+                  <td>Text string</td>
+                  <td style={{ color: "#334155" }}>
+                    Full legal student name (e.g. <span style={{ fontWeight: 500 }}>Aarav Rajan</span>).
+                  </td>
+                </tr>
+                <tr style={{ backgroundColor: "#fefefe" }}>
+                  <td style={{ fontWeight: 600, color: "#334155" }}>Branch</td>
+                  <td>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        backgroundColor: "#eff6ff",
+                        color: "#1e40af",
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        padding: "2px 8px",
+                        borderRadius: "3px"
+                      }}
+                    >
+                      Recommended
+                    </span>
+                  </td>
+                  <td className="font-mono" style={{ fontSize: "11px", color: "#475569" }}>
+                    Branch, Dept, Department, Course, Program
+                  </td>
+                  <td>Text string</td>
+                  <td style={{ color: "#334155" }}>
+                    Academic department (e.g. <span style={{ fontWeight: 500 }}>B.E. Computer Science and Engineering</span> or <span style={{ fontWeight: 500 }}>CSE</span>). Enables hall interleaving!
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ fontWeight: 600, color: "#334155" }}>Semester</td>
+                  <td>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        backgroundColor: "#f1f5f9",
+                        color: "#475569",
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        padding: "2px 8px",
+                        borderRadius: "3px"
+                      }}
+                    >
+                      Optional
+                    </span>
+                  </td>
+                  <td className="font-mono" style={{ fontSize: "11px", color: "#475569" }}>
+                    Semester, Sem, current semester
+                  </td>
+                  <td>Number (1–8)</td>
+                  <td style={{ color: "#334155" }}>
+                    Current semester number (e.g. <span style={{ fontWeight: 500 }}>5</span>).
+                  </td>
+                </tr>
+                <tr style={{ backgroundColor: "#fefefe" }}>
+                  <td style={{ fontWeight: 600, color: "#334155" }}>Course Code</td>
+                  <td>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        backgroundColor: "#f1f5f9",
+                        color: "#475569",
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        padding: "2px 8px",
+                        borderRadius: "3px"
+                      }}
+                    >
+                      Optional
+                    </span>
+                  </td>
+                  <td className="font-mono" style={{ fontSize: "11px", color: "#475569" }}>
+                    Course Code, Subject Code, subject, subject_code
+                  </td>
+                  <td>Text code</td>
+                  <td style={{ color: "#334155" }}>
+                    Subject code for hall roster & notice boards (e.g. <code className="font-mono" style={{ fontWeight: 600 }}>JCS2501</code>).
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Critical Format Guidance Tip Box */}
@@ -113,8 +350,26 @@ export const UploadPage: React.FC = () => {
             Every candidate register number is a <strong>16-digit numeric text string</strong> (e.g., <code style={{ fontFamily: "monospace", fontWeight: 700 }}>2403310910421108</code>).
             Microsoft Excel standard numeric cells only hold 15 significant digits and may corrupt the 16th digit or convert to scientific notation (<code style={{ fontFamily: "monospace" }}>2.4033E+15</code>).
           </div>
-          <div style={{ marginTop: "4px", fontWeight: 600 }}>
-            💡 Tip: Format the register number column as <u>Text</u> before saving your Excel file.
+          <div style={{ marginTop: "4px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}>
+            <span>💡 Tip: Format the register number column as <u>Text</u> before saving your Excel file, or download our ready-made template:</span>
+            <button
+              onClick={handleDownloadTemplate}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#92400e",
+                fontWeight: 700,
+                cursor: "pointer",
+                textDecoration: "underline",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: 0,
+                fontSize: "13px"
+              }}
+            >
+              <Download size={13} /> candidate_register_template.xlsx
+            </button>
           </div>
         </div>
       </div>
@@ -153,15 +408,26 @@ export const UploadPage: React.FC = () => {
           Upload .xlsx or .csv containing register numbers. Column headers like <em>"Register Number"</em>, <em>"Reg No"</em>, or <em>"register_no"</em> are recognized automatically.
         </p>
 
-        <label className="btn-blue" style={{ cursor: "pointer", display: "inline-flex" }}>
-          <FileSpreadsheet size={16} /> Choose File (.xlsx / .csv)
-          <input
-            type="file"
-            accept=".csv, .xlsx, .xls"
-            style={{ display: "none" }}
-            onChange={handleFileChange}
-          />
-        </label>
+        <div style={{ display: "flex", justifyContent: "center", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
+          <label className="btn-blue" style={{ cursor: "pointer", display: "inline-flex" }}>
+            <FileSpreadsheet size={16} /> Choose File (.xlsx / .csv)
+            <input
+              type="file"
+              accept=".csv, .xlsx, .xls"
+              style={{ display: "none" }}
+              onChange={handleFileChange}
+            />
+          </label>
+
+          <button
+            type="button"
+            onClick={handleDownloadTemplate}
+            className="btn-outline"
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+          >
+            <Download size={15} /> Download Template (.xlsx)
+          </button>
+        </div>
 
         {selectedFile && (
           <div style={{ marginTop: "12px", fontSize: "12px", color: "#334155", fontWeight: 600 }}>

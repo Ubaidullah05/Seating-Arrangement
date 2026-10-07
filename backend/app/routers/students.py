@@ -1,8 +1,10 @@
 import io
 import re
+from pathlib import Path
 from typing import List, Optional
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
@@ -12,6 +14,7 @@ from backend.app.schemas import (
     InvalidRow, DuplicateRow, StudentSearchResult, AllocationItemResponse
 )
 from backend.app import crud
+from backend.app.template_generator import generate_candidate_template_xlsx
 
 router = APIRouter(prefix="/api/v1/students", tags=["students"])
 
@@ -24,12 +27,62 @@ BRANCH_SYNONYMS = ["branch", "dept", "department", "course", "program"]
 SEM_SYNONYMS = ["sem", "semester", "current semester"]
 SUBJECT_SYNONYMS = ["subject", "subject code", "subject_code", "course code", "course_code"]
 
+def normalize_header(name: str) -> str:
+    s = str(name).strip().lower()
+    # Strip indicators like (required), (optional), (16-digit), *, punctuation
+    s = re.sub(r"[\(\[\*].*?[\)\]\*]", "", s)
+    s = re.sub(r"[*#:]", "", s)
+    s = re.sub(r"[_\-\s]+", " ", s).strip()
+    return s
+
 def find_column(df_columns, synonyms):
     col_map = {str(c).strip().lower(): c for c in df_columns}
     for syn in synonyms:
-        if syn in col_map:
-            return col_map[syn]
+        if syn.lower() in col_map:
+            return col_map[syn.lower()]
+    
+    # Normalized match (strips (required), *, punctuation, extra spaces)
+    norm_syns = [normalize_header(s) for s in synonyms]
+    for orig_col in df_columns:
+        norm_col = normalize_header(orig_col)
+        for n_syn in norm_syns:
+            if norm_col == n_syn:
+                return orig_col
+    
+    # Substring match
+    for orig_col in df_columns:
+        norm_col = normalize_header(orig_col)
+        for n_syn in norm_syns:
+            if n_syn and (n_syn in norm_col or norm_col in n_syn):
+                return orig_col
     return None
+
+@router.get("/template")
+async def download_template():
+    """
+    Downloads pre-formatted XLSX candidate register template with 16-digit text format cells
+    and all required/optional columns.
+    """
+    base_dir = Path(__file__).resolve().parent.parent.parent
+    template_path = base_dir / "samples" / "candidate_register_template.xlsx"
+    if not template_path.exists():
+        template_path = base_dir / "frontend" / "public" / "candidate_register_template.xlsx"
+    
+    if template_path.exists():
+        return FileResponse(
+            path=str(template_path),
+            filename="candidate_register_template.xlsx",
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": 'attachment; filename="candidate_register_template.xlsx"'}
+        )
+
+    # Dynamic generation fallback
+    buf = generate_candidate_template_xlsx()
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="candidate_register_template.xlsx"'}
+    )
 
 @router.post("/upload-preview", response_model=UploadPreviewResponse)
 async def upload_preview(
@@ -54,8 +107,18 @@ async def upload_preview(
         if filename.endswith(".csv"):
             df = pd.read_csv(io.BytesIO(content), dtype=str, keep_default_na=False)
         else:
-            # Excel file
-            df = pd.read_excel(io.BytesIO(content), dtype=str, keep_default_na=False)
+            # Excel file - check sheets to find one with register number
+            xl = pd.ExcelFile(io.BytesIO(content))
+            target_sheet = xl.sheet_names[0]
+            for sname in xl.sheet_names:
+                try:
+                    temp_df = pd.read_excel(xl, sheet_name=sname, nrows=3, dtype=str)
+                    if find_column(temp_df.columns, REGISTER_NO_SYNONYMS):
+                        target_sheet = sname
+                        break
+                except Exception:
+                    continue
+            df = pd.read_excel(xl, sheet_name=target_sheet, dtype=str, keep_default_na=False)
     except Exception as e:
         raise HTTPException(
             status_code=400,
@@ -172,7 +235,8 @@ async def upload_preview(
         duplicate_count=len(duplicate_rows),
         invalid_rows=invalid_rows,
         duplicate_rows=duplicate_rows,
-        valid_preview=valid_students[:25]
+        valid_preview=valid_students[:25],
+        all_valid=valid_students
     )
 
 

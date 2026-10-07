@@ -36,6 +36,7 @@ export interface UploadPreviewResponse {
   invalid_rows: InvalidRow[];
   duplicate_rows: DuplicateRow[];
   valid_preview: StudentCreate[];
+  all_valid?: StudentCreate[];
 }
 
 export interface Classroom {

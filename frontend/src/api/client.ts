@@ -96,4 +96,5 @@ export const api = {
   getExportPdfUrl: (examId: number) => `${API_BASE}/export/pdf?exam_id=${examId}`,
   getExportXlsxUrl: (examId: number) => `${API_BASE}/export/xlsx?exam_id=${examId}`,
   getExportNoticeBoardXlsxUrl: (examId: number) => `${API_BASE}/export/notice-board-xlsx?exam_id=${examId}`,
+  getTemplateDownloadUrl: () => `${API_BASE}/students/template`,
 };
