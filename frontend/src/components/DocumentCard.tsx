@@ -1,5 +1,5 @@
 import React from "react";
-import logoSvg from "../assets/logo.svg";
+import logoPng from "../assets/logo.png";
 
 interface InfoItem {
   label: string;
@@ -56,8 +56,8 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
             }}
           >
             <img 
-              src={logoSvg} 
-              alt="JCE Logo" 
+              src={logoPng} 
+              alt="Jerusalem College of Engineering Logo" 
               style={{ width: "100%", height: "100%", objectFit: "contain" }} 
             />
           </div>

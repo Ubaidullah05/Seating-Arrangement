@@ -1,5 +1,5 @@
 import React from "react";
-import logoSvg from "../assets/logo.svg";
+import logoPng from "../assets/logo.png";
 import { UserCheck } from "lucide-react";
 
 export const TopHeader: React.FC = () => {
@@ -38,7 +38,7 @@ export const TopHeader: React.FC = () => {
           }}
         >
           <img 
-            src={logoSvg} 
+            src={logoPng} 
             alt="Jerusalem College of Engineering Logo" 
             style={{ width: "100%", height: "100%", objectFit: "contain" }}
           />
