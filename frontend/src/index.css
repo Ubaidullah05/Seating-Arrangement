@@ -1,0 +1,300 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap');
+
+:root {
+  --primary-blue: #0050b3;
+  --dark-navy: #002f66;
+  --sidebar-start: #004a99;
+  --sidebar-end: #002047;
+  --header-start: #0050b3;
+  --header-end: #00367d;
+  --gold-accent: #b8892b;
+  --gold-bright: #e5a93c;
+  --active-blue: #1f5fa8;
+  --bg-page: #f4f6f9;
+  --card-bg: #ffffff;
+  --text-dark: #1a1a1a;
+  --text-muted: #555555;
+  --border-light: #e2e8f0;
+  --info-box-bg: #f7f9fc;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-page);
+  color: var(--text-dark);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography Utility Classes */
+.font-serif {
+  font-family: 'Georgia', 'Merriweather', 'Times New Roman', serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+}
+
+.font-sans {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Page Title with Blue Underline */
+.portal-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 24px;
+  position: relative;
+  padding-bottom: 12px;
+}
+
+.portal-page-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, #0050b3 0%, #1f5fa8 60%, #cbd5e1 100%);
+}
+
+.portal-page-title {
+  font-family: 'Georgia', 'Merriweather', serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.3px;
+}
+
+/* Gold Print / Action Button */
+.btn-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--gold-accent);
+  color: #ffffff;
+  font-family: 'Georgia', serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  padding: 8px 18px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(184, 137, 43, 0.25);
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.btn-gold:hover {
+  background-color: #9d7320;
+  box-shadow: 0 3px 6px rgba(184, 137, 43, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-blue {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--primary-blue);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.btn-blue:hover {
+  background-color: #003d8f;
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 7px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-outline:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
+/* Document Paper Card */
+.document-paper-card {
+  background-color: #ffffff;
+  max-width: 1060px;
+  margin: 0 auto 32px auto;
+  border: 1px solid #d8e2ec;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 31, 71, 0.06);
+  padding: 36px 44px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Faint Watermark */
+.document-watermark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    -35deg,
+    transparent,
+    transparent 140px,
+    rgba(0, 47, 102, 0.035) 140px,
+    rgba(0, 47, 102, 0.035) 280px
+  );
+  z-index: 1;
+}
+
+.document-watermark-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-30deg);
+  font-family: 'Georgia', serif;
+  font-size: 38px;
+  font-weight: 700;
+  color: rgba(0, 47, 102, 0.035);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.document-card-content {
+  position: relative;
+  z-index: 2;
+}
+
+/* Info Box */
+.portal-info-box {
+  background-color: var(--info-box-bg);
+  border: 1px solid #0050b3;
+  border-radius: 2px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px 16px;
+  padding: 14px 18px;
+  margin: 20px 0;
+}
+
+.portal-info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.portal-info-label {
+  font-family: 'Georgia', serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: #555555;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 2px;
+}
+
+.portal-info-value {
+  font-family: 'JetBrains Mono', 'Georgia', serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Document Table */
+.portal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+}
+
+.portal-table th {
+  background-color: #edf2f7;
+  color: #1e293b;
+  font-family: 'Georgia', serif;
+  font-weight: 700;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  text-align: left;
+  letter-spacing: 0.2px;
+}
+
+.portal-table td {
+  padding: 9px 14px;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  font-family: 'Georgia', serif;
+}
+
+.portal-table tr:nth-child(even) td {
+  background-color: #fbfcfe;
+}
+
+.portal-table tr:hover td {
+  background-color: #f0f7ff;
+}
+
+.portal-table td.mono-cell {
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* Print Media Styles */
+@media print {
+  body {
+    background-color: #ffffff !important;
+  }
+
+  .portal-sidebar,
+  .portal-header-bar,
+  .no-print {
+    display: none !important;
+  }
+
+  .portal-main-wrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .document-paper-card {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    page-break-after: always;
+  }
+
+  .portal-page-header {
+    display: none !important;
+  }
+}

@@ -1,0 +1,99 @@
+import type {
+  DashboardStats, Floor, Classroom, Exam, RoomSeatingPlan,
+  NoticeBoardResponse, StudentSearchResult, UploadPreviewResponse,
+  StudentCreate
+} from "../types";
+
+const API_BASE = "http://127.0.0.1:8000/api/v1";
+
+async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${endpoint}`, options);
+  if (!res.ok) {
+    let errMessage = "Network request failed";
+    try {
+      const errData = await res.json();
+      errMessage = errData.message || errData.detail || JSON.stringify(errData);
+    } catch {
+      errMessage = `HTTP error ${res.status}: ${res.statusText}`;
+    }
+    throw new Error(errMessage);
+  }
+  return res.json();
+}
+
+export const api = {
+  // Dashboard
+  getDashboardStats: (): Promise<DashboardStats> => 
+    request<DashboardStats>("/allocations/dashboard-stats"),
+
+  // Classrooms & Floors
+  getFloors: (): Promise<Floor[]> => 
+    request<Floor[]>("/classrooms/floors"),
+
+  updateClassroom: (id: number, data: { rows_per_column?: number; is_active?: boolean }): Promise<Classroom> => 
+    request<Classroom>(`/classrooms/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+
+  // Students & Uploads
+  uploadStudentsPreview: async (file: File): Promise<UploadPreviewResponse> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${API_BASE}/students/upload-preview`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+      throw new Error(err.detail || err.message || "Failed to parse upload file");
+    }
+    return res.json();
+  },
+
+  commitStudents: (students: StudentCreate[]): Promise<{ message: string; imported_count: number }> => 
+    request("/students/commit-upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ students }),
+    }),
+
+  clearAllStudents: (): Promise<{ message: string }> => 
+    request("/students/all", { method: "DELETE" }),
+
+  searchStudents: (query: string, examId?: number | null): Promise<StudentSearchResult[]> => {
+    const params = new URLSearchParams({ q: query });
+    if (examId) params.append("exam_id", examId.toString());
+    return request<StudentSearchResult[]>(`/students/search?${params.toString()}`);
+  },
+
+  // Exams
+  getExams: (): Promise<Exam[]> => 
+    request<Exam[]>("/exams"),
+
+  // Allocation
+  generateAllocation: (params: {
+    name: string;
+    exam_date: string;
+    session: string;
+    seed?: number | null;
+    reshuffle?: boolean;
+  }): Promise<{ message: string; exam_id: number; exam_name: string; allocated_count: number; seed: number }> => 
+    request("/allocations/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    }),
+
+  getRoomPlan: (examId: number, classroomId: number): Promise<RoomSeatingPlan> => 
+    request<RoomSeatingPlan>(`/allocations/room-plan?exam_id=${examId}&classroom_id=${classroomId}`),
+
+  getNoticeBoard: (examId: number): Promise<NoticeBoardResponse> => 
+    request<NoticeBoardResponse>(`/allocations/notice-board?exam_id=${examId}`),
+
+  // Export URLs
+  getExportPdfUrl: (examId: number) => `${API_BASE}/export/pdf?exam_id=${examId}`,
+  getExportXlsxUrl: (examId: number) => `${API_BASE}/export/xlsx?exam_id=${examId}`,
+  getExportNoticeBoardXlsxUrl: (examId: number) => `${API_BASE}/export/notice-board-xlsx?exam_id=${examId}`,
+};
