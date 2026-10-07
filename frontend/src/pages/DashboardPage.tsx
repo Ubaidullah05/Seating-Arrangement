@@ -186,7 +186,7 @@ export const DashboardPage: React.FC = () => {
                 {stats.total_active_rooms}
               </div>
               <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>
-                Across 3 floors (M001..M208)
+                Across 4 floors (M001..M305)
               </div>
             </div>
 
@@ -229,7 +229,7 @@ export const DashboardPage: React.FC = () => {
                   Campus Examination Halls Infrastructure
                 </h3>
                 <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
-                  Active room layout by floor (Ground Floor: M001 to M008, First Floor: M101 to M108, Second Floor: M201 to M208)
+                  Active room layout by floor (Ground: M001–M008, First: M101–M108, Second: M201–M208, Third: M301–M305)
                 </div>
               </div>
               <Link to="/rooms" className="btn-outline" style={{ fontSize: "12px" }}>

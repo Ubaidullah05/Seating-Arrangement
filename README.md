@@ -13,10 +13,11 @@ Built exclusively for examination staff and coordinators to automate the generat
   - **Top Header Bar**: Jerusalem College of Engineering crest emblem, bold uppercase serif heading, autonomous Anna University affiliation subtext, gold `"OFFICE OF THE CONTROLLER OF EXAMINATIONS"`, and static `"STAFF"` indicator (no authentication, no student logins).
   - **Main Content**: Blue underline headers, gold/mustard `"PRINT"` action button, and centered printable **Official Document Paper Cards** featuring watermark patterns, 4-column examination info boxes, and monospace register numbers.
 - **Classroom Topology**:
-  - **3 Floors**:
+  - **4 Floors (29 Halls)**:
     - **Ground Floor**: Rooms **`M001` to `M008`** (8 halls)
     - **First Floor**: Rooms **`M101` to `M108`** (8 halls)
     - **Second Floor**: Rooms **`M201` to `M208`** (8 halls)
+    - **Third Floor**: Rooms **`M301` to `M305`** (5 halls)
   - 4 seat columns per hall (`A`, `B`, `C`, `D`), configurable with 6 or 7 rows (24 to 28 capacity, allocating ~25-27 students per room).
 - **16-Digit Register Number Strict Text Handling**:
   - Every register number is treated as pure **TEXT** everywhere (`VARCHAR(16)`, `CHECK (length(register_no) = 16)` / `register_no ~ '^[0-9]{16}$'`).

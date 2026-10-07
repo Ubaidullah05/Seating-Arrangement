@@ -14,24 +14,24 @@ def seed_database():
     db = SessionLocal()
 
     try:
-        # Check if floors exist
-        existing_floors = db.query(Floor).all()
-        if not existing_floors:
-            print("Seeding 3 floors and 24 classrooms (M001 to M008, M101 to M108, M201 to M208)...")
-            
-            floors_spec = [
-                (0, "Ground Floor", ["M001", "M002", "M003", "M004", "M005", "M006", "M007", "M008"]),
-                (1, "First Floor", ["M101", "M102", "M103", "M104", "M105", "M106", "M107", "M108"]),
-                (2, "Second Floor", ["M201", "M202", "M203", "M204", "M205", "M206", "M207", "M208"]),
-            ]
+        floors_spec = [
+            (0, "Ground Floor", ["M001", "M002", "M003", "M004", "M005", "M006", "M007", "M008"]),
+            (1, "First Floor", ["M101", "M102", "M103", "M104", "M105", "M106", "M107", "M108"]),
+            (2, "Second Floor", ["M201", "M202", "M203", "M204", "M205", "M206", "M207", "M208"]),
+            (3, "Third Floor", ["M301", "M302", "M303", "M304", "M305"]),
+        ]
 
-            for floor_num, floor_name, room_names in floors_spec:
+        for floor_num, floor_name, room_names in floors_spec:
+            floor = db.query(Floor).filter(Floor.floor_number == floor_num).first()
+            if not floor:
                 floor = Floor(name=floor_name, floor_number=floor_num)
                 db.add(floor)
-                db.flush() # get floor.id
+                db.flush()
+                print(f"Created floor: {floor_name}")
 
-                for r_name in room_names:
-                    # Capacity 28 (4 columns x 7 rows)
+            for r_name in room_names:
+                existing_room = db.query(Classroom).filter(Classroom.name == r_name).first()
+                if not existing_room:
                     room = Classroom(
                         floor_id=floor.id,
                         name=r_name,
@@ -40,11 +40,9 @@ def seed_database():
                         is_active=True
                     )
                     db.add(room)
+                    print(f"Created classroom: {r_name} in {floor.name}")
 
-            db.commit()
-            print("Successfully created 3 floors with 8 classrooms each (24 rooms total, 672 capacity).")
-        else:
-            print("Floors and classrooms already exist. Skipping room creation.")
+        db.commit()
 
         # Seed sample students if database has 0 students
         student_count = db.query(Student).count()

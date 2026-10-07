@@ -31,8 +31,8 @@ class Floor(Base):
     __tablename__ = "floors"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(50), nullable=False) # e.g. "Ground Floor", "First Floor", "Second Floor"
-    floor_number = Column(Integer, nullable=False, unique=True) # 0, 1, 2
+    name = Column(String(50), nullable=False) # e.g. "Ground Floor", "First Floor", "Second Floor", "Third Floor"
+    floor_number = Column(Integer, nullable=False, unique=True) # 0, 1, 2, 3
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     classrooms = relationship("Classroom", back_populates="floor", cascade="all, delete-orphan", order_by="Classroom.name")

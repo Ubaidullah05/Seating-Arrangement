@@ -30,7 +30,7 @@ export const RoomsPage: React.FC = () => {
         <div>
           <h1 className="portal-page-title">Classroom & Floor Configuration</h1>
           <div style={{ fontSize: "13px", color: "#64748b", marginTop: "4px" }}>
-            Manage examination halls across Ground, First and Second floors
+            Manage examination halls across Ground, First, Second and Third floors
           </div>
         </div>
       </div>

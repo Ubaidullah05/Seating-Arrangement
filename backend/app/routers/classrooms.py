@@ -10,7 +10,7 @@ router = APIRouter(prefix="/api/v1/classrooms", tags=["classrooms"])
 @router.get("/floors", response_model=List[FloorResponse])
 def get_floors_with_rooms(db: Session = Depends(get_db)):
     """
-    Returns all 3 floors with their associated classrooms (e.g. M001..M008, M101..M108, M201..M208).
+    Returns all floors with their associated classrooms (e.g. Ground, First, Second, Third floor: M001..M305).
     """
     floors = crud.get_floors(db)
     return floors
