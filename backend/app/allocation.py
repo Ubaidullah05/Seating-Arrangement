@@ -122,19 +122,28 @@ def run_seating_allocation(
     if len(interleaved_students) != total_students:
         interleaved_students = students_copy
 
-    # Find existing or create new Exam record
-    # Check if an exam with this name, date and session exists
-    exam = (
+    # Check if an exam for this date and session already exists
+    existing_exam = (
         db.query(Exam)
         .filter(
-            Exam.name == request.name,
             Exam.exam_date == request.exam_date,
             Exam.session == request.session
         )
         .first()
     )
 
-    if not exam:
+    if existing_exam:
+        if not request.reshuffle:
+            raise ValueError(
+                f"Already generated: Seating arrangement for date {request.exam_date} and session {request.session} has already been generated."
+            )
+        exam = existing_exam
+        exam.name = request.name
+        exam.seed = seed
+        # Clear existing allocations for this exam
+        db.query(Allocation).filter(Allocation.exam_id == exam.id).delete()
+        db.flush()
+    else:
         exam = Exam(
             name=request.name,
             exam_date=request.exam_date,
@@ -142,11 +151,6 @@ def run_seating_allocation(
             seed=seed
         )
         db.add(exam)
-        db.flush()
-    else:
-        exam.seed = seed
-        # Clear existing allocations for this exam
-        db.query(Allocation).filter(Allocation.exam_id == exam.id).delete()
         db.flush()
 
     # Allocate students to rooms and seats

@@ -132,6 +132,12 @@ def get_latest_exam(db: Session) -> Optional[Exam]:
     return db.query(Exam).order_by(Exam.id.desc()).first()
 
 def create_exam(db: Session, exam_data: ExamCreate) -> Exam:
+    existing = db.query(Exam).filter(
+        Exam.exam_date == exam_data.exam_date,
+        Exam.session == exam_data.session
+    ).first()
+    if existing:
+        raise ValueError(f"Exam already exists for date {exam_data.exam_date} and session {exam_data.session}.")
     exam = Exam(
         name=exam_data.name,
         exam_date=exam_data.exam_date,

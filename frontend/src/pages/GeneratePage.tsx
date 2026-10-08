@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
@@ -7,7 +7,7 @@ import {
   Sparkles, 
   AlertCircle, 
   CheckCircle2, 
-  ArrowRight,
+  ArrowRight, 
   RefreshCw
 } from "lucide-react";
 
@@ -32,6 +32,16 @@ export const GeneratePage: React.FC = () => {
     queryFn: api.getDashboardStats,
   });
 
+  const { data: exams } = useQuery({
+    queryKey: ["exams"],
+    queryFn: api.getExams,
+  });
+
+  const existingExam = useMemo(() => {
+    if (!exams) return null;
+    return exams.find((e) => e.exam_date === examDate && e.session === session) || null;
+  }, [exams, examDate, session]);
+
   const generateMutation = useMutation({
     mutationFn: (params: any) => api.generateAllocation(params),
     onSuccess: (data) => {
@@ -48,6 +58,12 @@ export const GeneratePage: React.FC = () => {
 
   const handleGenerate = (isReshuffle = false) => {
     setErrorMessage(null);
+    if (existingExam && !isReshuffle) {
+      setErrorMessage(
+        `Already generated: Seating arrangement for date ${examDate} and session ${session} has already been generated (${existingExam.name}). Use "Re-Shuffle with New Seed" to update this existing session.`
+      );
+      return;
+    }
     const seedVal = customSeed.trim() ? parseInt(customSeed.trim()) : undefined;
     generateMutation.mutate({
       name: examName,
@@ -246,6 +262,28 @@ export const GeneratePage: React.FC = () => {
               Using the same seed number will consistently reproduce the identical randomized seat arrangement.
             </div>
           </div>
+          {/* Existing Exam Warning */}
+          {existingExam && (
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                backgroundColor: "#fffbeb",
+                border: "1px solid #fde68a",
+                borderRadius: "4px",
+                padding: "12px 16px",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                color: "#92400e",
+                fontSize: "13px",
+              }}
+            >
+              <AlertCircle size={18} color="#d97706" style={{ flexShrink: 0 }} />
+              <div>
+                <strong>Already Generated:</strong> A seating arrangement for <strong>{examDate}</strong> (<strong>{session === "FN" ? "FN — Forenoon" : "AN — Afternoon"}</strong>) has already been generated (<em>{existingExam.name}</em>). Duplicate generation is blocked.
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}
@@ -261,6 +299,15 @@ export const GeneratePage: React.FC = () => {
 
           <button
             onClick={() => {
+              if (existingExam) {
+                if (
+                  !confirm(
+                    `A seating arrangement for ${examDate} (${session}) has already been generated (${existingExam.name}).\n\nDo you want to re-shuffle and overwrite the existing seating arrangement?`
+                  )
+                ) {
+                  return;
+                }
+              }
               handleRandomizeSeed();
               handleGenerate(true);
             }}

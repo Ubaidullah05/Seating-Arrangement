@@ -32,4 +32,7 @@ def get_exam(exam_id: int, db: Session = Depends(get_db)):
 
 @router.post("", response_model=ExamResponse)
 def create_exam(payload: ExamCreate, db: Session = Depends(get_db)):
-    return crud.create_exam(db, payload)
+    try:
+        return crud.create_exam(db, payload)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

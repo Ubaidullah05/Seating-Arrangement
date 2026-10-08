@@ -314,3 +314,18 @@ npm run dev -- --host 127.0.0.1 --port 5173
   - **Seating Arrangement Document Header (`SeatingPlansPage.tsx`)**: Rendered precise session timings on the printable header info bar.
   - **PDF & Excel Exports (`export_pdf.py` & `export_xlsx.py`)**: Integrated `format_session_label` so official attendance and master seating plans reflect the updated exam session hours.
 
+#### 8. Date & Session Uniqueness Constraint & Duplicate Allocation Prevention
+- **Unique Constraint (`models.py`)**:
+  - Added composite `UniqueConstraint("exam_date", "session", name="uq_exam_date_session")` on `exams` table.
+- **Backend Validation (`allocation.py`, `crud.py`, `exams.py`)**:
+  - Verifies whether an exam record already exists for the given `exam_date` and `session` (FN / AN).
+  - If already generated and `reshuffle` is false, rejects generation with:
+    `"Already generated: Seating arrangement for date {exam_date} and session {session} has already been generated."`
+  - When reshuffling is explicitly requested (`reshuffle=True`), updates the existing exam in-place without creating duplicate records.
+- **Frontend Live Validation (`GeneratePage.tsx`)**:
+  - Monitors the selected Exam Date and Session inputs in real-time against loaded examinations.
+  - Displays a warning banner: *"Already Generated: A seating arrangement for {examDate} ({session}) has already been generated... Duplicate generation is blocked."*
+  - Blocks "Run Random Allocation" button from generating duplicates.
+  - Added confirmation modal prompt when clicking "Re-Shuffle with New Seed" to safely overwrite existing allocations.
+
+

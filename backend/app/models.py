@@ -59,6 +59,9 @@ class Classroom(Base):
 
 class Exam(Base):
     __tablename__ = "exams"
+    __table_args__ = (
+        UniqueConstraint("exam_date", "session", name="uq_exam_date_session"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(150), nullable=False) # "END SEMESTER EXAMINATIONS - OCT/NOV 2026"
