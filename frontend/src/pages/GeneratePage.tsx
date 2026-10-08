@@ -199,8 +199,8 @@ export const GeneratePage: React.FC = () => {
                 backgroundColor: "#ffffff",
               }}
             >
-              <option value="FN">FN — Forenoon (10:00 AM – 01:00 PM)</option>
-              <option value="AN">AN — Afternoon (02:00 PM – 05:00 PM)</option>
+              <option value="FN">FN — Forenoon (09:00 AM – 12:00 PM)</option>
+              <option value="AN">AN — Afternoon (01:00 PM – 04:00 PM)</option>
             </select>
           </div>
 

@@ -5,6 +5,14 @@ from openpyxl.utils import get_column_letter
 from typing import List
 from backend.app.models import Allocation, Exam
 
+def format_session_label(session: str) -> str:
+    s = (session or "").strip().upper()
+    if s == "FN":
+        return "FN (09:00 AM - 12:00 PM)"
+    elif s == "AN":
+        return "AN (01:00 PM - 04:00 PM)"
+    return session or ""
+
 def generate_allocations_xlsx(allocations: List[Allocation], exam: Exam) -> io.BytesIO:
     """
     Generates an Excel workbook with allocations.
@@ -45,7 +53,7 @@ def generate_allocations_xlsx(allocations: List[Allocation], exam: Exam) -> io.B
     ws.row_dimensions[2].height = 20
 
     ws.merge_cells("A3:G3")
-    ws["A3"] = f"Date: {exam.exam_date} | Session: {exam.session} | Total Allocated: {len(allocations)}"
+    ws["A3"] = f"Date: {exam.exam_date} | Session: {format_session_label(exam.session)} | Total Allocated: {len(allocations)}"
     ws["A3"].font = Font(name="Segoe UI", size=10, italic=True, color="555555")
     ws["A3"].alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[3].height = 18
@@ -183,7 +191,7 @@ def generate_notice_board_xlsx(allocations: List[Allocation], exam: Exam) -> io.
     ws["A1"].alignment = Alignment(horizontal="center")
 
     ws.merge_cells("A2:F2")
-    ws["A2"] = f"EXAM SEATING NOTICE BOARD | {exam.name} | Date: {exam.exam_date} ({exam.session})"
+    ws["A2"] = f"EXAM SEATING NOTICE BOARD | {exam.name} | Date: {exam.exam_date} ({format_session_label(exam.session)})"
     ws["A2"].font = Font(name="Segoe UI", size=11, bold=True, color="B8892B")
     ws["A2"].alignment = Alignment(horizontal="center")
 

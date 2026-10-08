@@ -304,3 +304,13 @@ npm run dev -- --host 127.0.0.1 --port 5173
   - Generates 16-digit valid register numbers from `2403310910420001` to `2403310910420924`.
   - Executed seed script and verified database state: 924 students, 33 classrooms, and 6 floors.
 
+#### 7. Examination Session Timings Updated
+- **Standardized Session Schedule**:
+  - **FN (Forenoon)**: **`09:00 AM – 12:00 PM`** (updated from `10:00 AM – 01:00 PM`).
+  - **AN (Afternoon)**: **`01:00 PM – 04:00 PM`** (updated from `02:00 PM – 05:00 PM`).
+- **Updated Components & Exports**:
+  - **Generate Seating Modal / Form (`GeneratePage.tsx`)**: Updated `<select id="session">` options to display the new timing labels.
+  - **Dashboard Overview (`DashboardPage.tsx`)**: Formatted active exam session badge to show `FN (09:00 AM – 12:00 PM)` or `AN (01:00 PM – 04:00 PM)`.
+  - **Seating Arrangement Document Header (`SeatingPlansPage.tsx`)**: Rendered precise session timings on the printable header info bar.
+  - **PDF & Excel Exports (`export_pdf.py` & `export_xlsx.py`)**: Integrated `format_session_label` so official attendance and master seating plans reflect the updated exam session hours.
+

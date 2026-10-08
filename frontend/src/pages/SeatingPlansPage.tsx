@@ -397,7 +397,7 @@ export const SeatingPlansPage: React.FC = () => {
           infoItems={[
             { label: "EXAMINATION", value: currentExam.name },
             { label: "EXAM DATE", value: currentExam.exam_date },
-            { label: "SESSION", value: currentExam.session },
+            { label: "SESSION", value: currentExam.session === "FN" ? "FN (09:00 AM – 12:00 PM)" : currentExam.session === "AN" ? "AN (01:00 PM – 04:00 PM)" : currentExam.session },
             { label: "FLOOR LEVEL", value: roomPlan.floor_name },
             { label: "HALL NO", value: roomPlan.classroom_name },
             { label: "TOTAL ALLOCATED", value: `${roomPlan.allocated_count} / ${roomPlan.capacity} Seats` },

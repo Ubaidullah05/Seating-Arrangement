@@ -50,6 +50,15 @@ class NumberedCanvas(canvas.Canvas):
         self.restoreState()
 
 
+def format_session_label(session: str) -> str:
+    s = (session or "").strip().upper()
+    if s == "FN":
+        return "FN (09:00 AM – 12:00 PM)"
+    elif s == "AN":
+        return "AN (01:00 PM – 04:00 PM)"
+    return session or ""
+
+
 def generate_seating_pdf(allocations: List[Allocation], exam: Exam) -> io.BytesIO:
     """
     Generates a high-quality multi-page PDF with 1 page per classroom
@@ -193,7 +202,7 @@ def generate_seating_pdf(allocations: List[Allocation], exam: Exam) -> io.BytesI
             ],
             [
                 Paragraph("<b>SESSION:</b>", cell_text_style),
-                Paragraph(f"{exam.session}", cell_text_style),
+                Paragraph(f"{format_session_label(exam.session)}", cell_text_style),
                 Paragraph("<b>HALL NO:</b>", cell_text_style),
                 Paragraph(f"<b>{room_name}</b>", cell_text_style),
             ],
@@ -408,7 +417,7 @@ def generate_notice_board_pdf(allocations: List[Allocation], exam: Exam) -> io.B
             Paragraph("<b>EXAM DATE:</b>", cell_text_style),
             Paragraph(f"{exam.exam_date}", cell_text_style),
             Paragraph("<b>SESSION:</b>", cell_text_style),
-            Paragraph(f"{exam.session}", cell_text_style),
+            Paragraph(f"{format_session_label(exam.session)}", cell_text_style),
         ],
         [
             Paragraph("<b>TOTAL CANDIDATES:</b>", cell_text_style),
