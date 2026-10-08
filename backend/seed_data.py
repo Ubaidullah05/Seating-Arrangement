@@ -8,7 +8,7 @@ sys.path.insert(0, str(backend_dir.parent))
 from backend.app.database import engine, Base, SessionLocal
 from backend.app.models import Floor, Classroom, Student, Exam, Allocation
 
-def seed_database(target_students: int = 812, force: bool = False):
+def seed_database(target_students: int = 924, force: bool = False):
     print("Checking and creating database tables...")
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
@@ -46,7 +46,7 @@ def seed_database(target_students: int = 812, force: bool = False):
 
         db.commit()
 
-        # Seed sample students (target: 812 students = 29 classrooms x 28 capacity)
+        # Seed sample students (target: 924 students = 33 classrooms x 28 capacity)
         student_count = db.query(Student).count()
         if student_count != target_students or force:
             print(f"Clearing previous allocations and students to seed exactly {target_students} students...")
@@ -85,7 +85,7 @@ def seed_database(target_students: int = 812, force: bool = False):
 
             students = []
             for i in range(target_students):
-                # 16-digit register number: 2403310910420001 to 2403310910420812
+                # 16-digit register number: 2403310910420001 to 2403310910420924
                 reg_num_str = f"240331091042{i+1:04d}"
                 
                 # Assign branch and subject code round-robin
@@ -124,7 +124,7 @@ def seed_database(target_students: int = 812, force: bool = False):
 
 if __name__ == "__main__":
     force_run = "--force" in sys.argv
-    count = 812
+    count = 924
     for arg in sys.argv[1:]:
         if arg.isdigit():
             count = int(arg)

@@ -281,3 +281,26 @@ npm run dev -- --host 127.0.0.1 --port 5173
 - **Official Sign-off Blocks**:
   - Printable **Hall Invigilator Declaration** block (signature, name, date, and time).
   - Printable **Exam Cell / COE Office Acknowledgement** receipt block (officer signature and receipt stamp).
+
+#### 4. Removal of Download Templates and `candidate_register_template.xlsx`
+- **UI Cleanups in `UploadPage.tsx`**:
+  - Removed header `Download Template (.xlsx)` button next to `Clear All Students`.
+  - Removed `Download Template (.xlsx)` button inside the "Excel Template Required & Supported Columns" card header.
+  - Removed `candidate_register_template.xlsx` download link and prompt from the "Important Register Number Precision Advisory" callout.
+  - Removed `Download Template (.xlsx)` button beside the "Choose File (.xlsx / .csv)" upload input.
+  - Cleaned up unused `Download` icon import and `handleDownloadTemplate` handler.
+- **File System Cleanup**:
+  - Removed static `candidate_register_template.xlsx` files from `frontend/public/`, `samples/`, and `frontend/dist/`.
+
+#### 5. Removal of Hall Roster Export Buttons
+- **Action Bar Cleanups in `SeatingPlansPage.tsx`**:
+  - Removed **`Hall Roster (XLSX)`** and **`Hall Roster (PDF)`** download buttons from the top export header.
+  - Simplified the top export actions to **Export PDF**, **Export Excel (XLSX)**, and **PRINT**.
+  - Simplified `handleDownload` handler and `downloading` state type to only manage primary seating plan export files.
+
+#### 6. Database Seed Data Updated to Full Capacity (924 Students)
+- **Updated `backend/seed_data.py`**:
+  - Scaled target student population from 812 to **924 candidates** to match the full capacity of all 33 examination halls (33 halls × 28 seats = 924 seats).
+  - Generates 16-digit valid register numbers from `2403310910420001` to `2403310910420924`.
+  - Executed seed script and verified database state: 924 students, 33 classrooms, and 6 floors.
+
