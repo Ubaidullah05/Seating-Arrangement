@@ -56,15 +56,15 @@ export const UploadPage: React.FC = () => {
     },
   });
 
-  const handleDownloadTemplate = () => {
-    const templateUrl = api.getTemplateDownloadUrl();
-    const link = document.createElement("a");
-    link.href = templateUrl;
-    link.setAttribute("download", "candidate_register_template.xlsx");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadTemplate = async () => {
+    try {
+      await api.downloadTemplate();
+    } catch (err: any) {
+      console.error("Failed to download template:", err);
+      setStatusMessage(`Template download failed: ${err.message || "Unknown error"}`);
+    }
   };
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {

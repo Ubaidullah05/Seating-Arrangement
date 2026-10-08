@@ -9,7 +9,10 @@ import {
   FileSpreadsheet, 
   Grid3X3, 
   List, 
-  ClipboardList
+  ClipboardList,
+  Loader2,
+  AlertCircle,
+  X
 } from "lucide-react";
 
 export const SeatingPlansPage: React.FC = () => {
@@ -17,6 +20,10 @@ export const SeatingPlansPage: React.FC = () => {
   const [selectedFloorId, setSelectedFloorId] = useState<number | null>(null);
   const [selectedClassroomId, setSelectedClassroomId] = useState<number | null>(null);
   const [activeView, setActiveView] = useState<"grid" | "table" | "notice">("grid");
+
+  // Export download states
+  const [downloading, setDownloading] = useState<"pdf" | "xlsx" | "notice-xlsx" | "notice-pdf" | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   // Fetch Exams
   const { data: exams } = useQuery({
@@ -51,14 +58,19 @@ export const SeatingPlansPage: React.FC = () => {
   const currentExam = exams?.find(e => e.id === selectedExamId) || exams?.[0];
 
   // Fetch Room Plan
-  const { data: roomPlan, isLoading: isPlanLoading } = useQuery({
+  const { data: roomPlan, isLoading: isPlanLoading, isError: isPlanError, error: planError } = useQuery({
     queryKey: ["room-plan", selectedExamId, selectedClassroomId],
     queryFn: () => (selectedExamId && selectedClassroomId) ? api.getRoomPlan(selectedExamId, selectedClassroomId) : null,
     enabled: !!(selectedExamId && selectedClassroomId && activeView !== "notice"),
   });
 
   // Fetch Notice Board data
-  const { data: noticeBoard } = useQuery({
+  const { 
+    data: noticeBoard, 
+    isLoading: isNoticeLoading, 
+    isError: isNoticeError, 
+    error: noticeError 
+  } = useQuery({
     queryKey: ["notice-board", selectedExamId],
     queryFn: () => selectedExamId ? api.getNoticeBoard(selectedExamId) : null,
     enabled: !!(selectedExamId && activeView === "notice"),
@@ -68,9 +80,33 @@ export const SeatingPlansPage: React.FC = () => {
     window.print();
   };
 
+  const handleDownload = async (type: "pdf" | "xlsx" | "notice-xlsx" | "notice-pdf") => {
+    if (!selectedExamId) return;
+    setDownloading(type);
+    setDownloadError(null);
+    try {
+      if (type === "pdf") {
+        await api.downloadExportPdf(selectedExamId);
+      } else if (type === "xlsx") {
+        await api.downloadExportXlsx(selectedExamId);
+      } else if (type === "notice-xlsx") {
+        await api.downloadExportNoticeBoardXlsx(selectedExamId);
+      } else if (type === "notice-pdf") {
+        await api.downloadExportNoticeBoardPdf(selectedExamId);
+      }
+    } catch (err: any) {
+      console.error("Export error:", err);
+      setDownloadError(
+        err.message || "Failed to download export file. Please verify that seating allocations exist for this exam."
+      );
+    } finally {
+      setDownloading(null);
+    }
+  };
+
   return (
     <div style={{ maxWidth: "1140px", margin: "0 auto", padding: "24px 28px" }}>
-      {/* Page Header Row with PRINT Button */}
+      {/* Page Header Row with Action Buttons */}
       <div className="portal-page-header">
         <div>
           <h1 className="portal-page-title">Examination Seating Arrangement Plans</h1>
@@ -80,38 +116,104 @@ export const SeatingPlansPage: React.FC = () => {
         </div>
 
         {/* Action Controls */}
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }} className="no-print">
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }} className="no-print">
           {selectedExamId && (
             <>
-              <a
-                href={api.getExportPdfUrl(selectedExamId)}
-                download
+              <button
+                type="button"
+                onClick={() => handleDownload("pdf")}
+                disabled={!!downloading}
                 className="btn-outline"
-                style={{ fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                style={{
+                  fontSize: "12px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  cursor: downloading ? "not-allowed" : "pointer",
+                  opacity: downloading && downloading !== "pdf" ? 0.6 : 1,
+                  backgroundColor: "#ffffff",
+                }}
                 title="Download complete PDF with 1 page per classroom"
               >
-                <FileDown size={15} color="#dc2626" /> Export PDF
-              </a>
+                {downloading === "pdf" ? (
+                  <Loader2 size={15} className="animate-spin" color="#dc2626" />
+                ) : (
+                  <FileDown size={15} color="#dc2626" />
+                )}
+                {downloading === "pdf" ? "Exporting PDF..." : "Export PDF"}
+              </button>
 
-              <a
-                href={api.getExportXlsxUrl(selectedExamId)}
-                download
+              <button
+                type="button"
+                onClick={() => handleDownload("xlsx")}
+                disabled={!!downloading}
                 className="btn-outline"
-                style={{ fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                style={{
+                  fontSize: "12px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  cursor: downloading ? "not-allowed" : "pointer",
+                  opacity: downloading && downloading !== "xlsx" ? 0.6 : 1,
+                  backgroundColor: "#ffffff",
+                }}
                 title="Download Excel file preserving 16-digit register numbers as text"
               >
-                <FileSpreadsheet size={15} color="#16a34a" /> Export Excel (XLSX)
-              </a>
+                {downloading === "xlsx" ? (
+                  <Loader2 size={15} className="animate-spin" color="#16a34a" />
+                ) : (
+                  <FileSpreadsheet size={15} color="#16a34a" />
+                )}
+                {downloading === "xlsx" ? "Exporting Excel..." : "Export Excel (XLSX)"}
+              </button>
 
-              <a
-                href={api.getExportNoticeBoardXlsxUrl(selectedExamId)}
-                download
+              <button
+                type="button"
+                onClick={() => handleDownload("notice-xlsx")}
+                disabled={!!downloading}
                 className="btn-outline"
-                style={{ fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                style={{
+                  fontSize: "12px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  cursor: downloading ? "not-allowed" : "pointer",
+                  opacity: downloading && downloading !== "notice-xlsx" ? 0.6 : 1,
+                  backgroundColor: "#ffffff",
+                }}
                 title="Download Notice Board Summary Excel"
               >
-                <FileSpreadsheet size={15} color="#0050b3" /> Notice Board (XLSX)
-              </a>
+                {downloading === "notice-xlsx" ? (
+                  <Loader2 size={15} className="animate-spin" color="#0050b3" />
+                ) : (
+                  <FileSpreadsheet size={15} color="#0050b3" />
+                )}
+                {downloading === "notice-xlsx" ? "Exporting Notice..." : "Notice Board (XLSX)"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDownload("notice-pdf")}
+                disabled={!!downloading}
+                className="btn-outline"
+                style={{
+                  fontSize: "12px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  cursor: downloading ? "not-allowed" : "pointer",
+                  opacity: downloading && downloading !== "notice-pdf" ? 0.6 : 1,
+                  backgroundColor: "#ffffff",
+                }}
+                title="Download Notice Board Summary as Printable PDF"
+              >
+                {downloading === "notice-pdf" ? (
+                  <Loader2 size={15} className="animate-spin" color="#b8892b" />
+                ) : (
+                  <FileDown size={15} color="#b8892b" />
+                )}
+                {downloading === "notice-pdf" ? "Exporting PDF..." : "Notice Board (PDF)"}
+              </button>
             </>
           )}
 
@@ -120,6 +222,51 @@ export const SeatingPlansPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Export Error Alert Banner */}
+      {downloadError && (
+        <div
+          className="no-print"
+          style={{
+            backgroundColor: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: "6px",
+            padding: "12px 16px",
+            marginBottom: "18px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            color: "#991b1b",
+            fontSize: "13px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <AlertCircle size={18} color="#dc2626" style={{ flexShrink: 0 }} />
+            <div>
+              <strong>Export Warning:</strong> {downloadError}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDownloadError(null)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#991b1b",
+              cursor: "pointer",
+              padding: "4px",
+              display: "flex",
+              alignItems: "center",
+            }}
+            title="Dismiss notification"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
 
       {/* Filter Selector Bar (Hidden during Print) */}
       <div
@@ -287,8 +434,37 @@ export const SeatingPlansPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Document Card Render */}
-      {activeView === "notice" && noticeBoard && (
+      {/* Notice Board View Loading / Error / Empty / Content */}
+      {activeView === "notice" && isNoticeLoading && (
+        <div style={{ padding: "60px 20px", textAlign: "center", color: "#64748b", backgroundColor: "#ffffff", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+          <Loader2 size={32} className="animate-spin" style={{ margin: "0 auto 12px auto", color: "#0050b3" }} />
+          <div style={{ fontWeight: 600, color: "#1e293b", fontSize: "15px" }}>Loading Notice Board Summary...</div>
+          <div style={{ fontSize: "13px", marginTop: "4px" }}>Retrieving room allocations and register number ranges</div>
+        </div>
+      )}
+
+      {activeView === "notice" && isNoticeError && (
+        <div style={{ padding: "40px 20px", textAlign: "center", backgroundColor: "#ffffff", borderRadius: "6px", border: "1px solid #fecaca" }}>
+          <AlertCircle size={36} color="#dc2626" style={{ margin: "0 auto 12px auto" }} />
+          <div style={{ fontWeight: 700, color: "#991b1b", fontSize: "16px" }}>Unable to Load Notice Board</div>
+          <div style={{ fontSize: "13px", color: "#64748b", marginTop: "6px" }}>
+            {(noticeError as any)?.message || "Failed to retrieve notice board data. Please verify your connection or generate allocations."}
+          </div>
+        </div>
+      )}
+
+      {activeView === "notice" && !isNoticeLoading && !isNoticeError && noticeBoard && noticeBoard.rooms.length === 0 && (
+        <div style={{ padding: "60px 20px", textAlign: "center", backgroundColor: "#ffffff", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+          <ClipboardList size={40} color="#94a3b8" style={{ margin: "0 auto 12px auto" }} />
+          <div style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b" }}>No Seating Allocations Found</div>
+          <div style={{ fontSize: "13px", color: "#64748b", marginTop: "6px", maxWidth: "480px", margin: "6px auto 0 auto" }}>
+            There are currently no classroom allocations generated for <strong>{noticeBoard.exam.name}</strong>.
+            Please visit the <strong>Allocation Generator</strong> tab to compute seat assignments first.
+          </div>
+        </div>
+      )}
+
+      {activeView === "notice" && !isNoticeLoading && noticeBoard && noticeBoard.rooms.length > 0 && (
         <DocumentCard
           documentTitle="NOTICE BOARD SEATING SUMMARY"
           examName={noticeBoard.exam.name}
@@ -334,7 +510,26 @@ export const SeatingPlansPage: React.FC = () => {
         </DocumentCard>
       )}
 
-      {activeView !== "notice" && roomPlan && currentExam && (
+      {/* Classroom Plan View Loading / Error / Content */}
+      {activeView !== "notice" && isPlanLoading && (
+        <div style={{ padding: "60px 20px", textAlign: "center", color: "#64748b", backgroundColor: "#ffffff", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+          <Loader2 size={32} className="animate-spin" style={{ margin: "0 auto 12px auto", color: "#0050b3" }} />
+          <div style={{ fontWeight: 600, color: "#1e293b", fontSize: "15px" }}>Loading Hall Seating Plan...</div>
+          <div style={{ fontSize: "13px", marginTop: "4px" }}>Computing grid layout and seat assignments</div>
+        </div>
+      )}
+
+      {activeView !== "notice" && isPlanError && (
+        <div style={{ padding: "40px 20px", textAlign: "center", backgroundColor: "#ffffff", borderRadius: "6px", border: "1px solid #fecaca" }}>
+          <AlertCircle size={36} color="#dc2626" style={{ margin: "0 auto 12px auto" }} />
+          <div style={{ fontWeight: 700, color: "#991b1b", fontSize: "16px" }}>Unable to Load Seating Plan</div>
+          <div style={{ fontSize: "13px", color: "#64748b", marginTop: "6px" }}>
+            {(planError as any)?.message || "Failed to load room plan details."}
+          </div>
+        </div>
+      )}
+
+      {activeView !== "notice" && !isPlanLoading && roomPlan && currentExam && (
         <DocumentCard
           documentTitle={`SEATING ARRANGEMENT — HALL ${roomPlan.classroom_name}`}
           examName={currentExam.name}
@@ -385,6 +580,13 @@ export const SeatingPlansPage: React.FC = () => {
                         </tr>
                       );
                     })}
+                  {roomPlan.allocated_count === 0 && (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: "center", padding: "32px", color: "#64748b" }}>
+                        No students allocated to this classroom for this examination.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -392,11 +594,6 @@ export const SeatingPlansPage: React.FC = () => {
         </DocumentCard>
       )}
 
-      {isPlanLoading && (
-        <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
-          Loading seating plan details...
-        </div>
-      )}
     </div>
   );
 };

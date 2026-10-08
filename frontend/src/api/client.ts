@@ -96,5 +96,69 @@ export const api = {
   getExportPdfUrl: (examId: number) => `${API_BASE}/export/pdf?exam_id=${examId}`,
   getExportXlsxUrl: (examId: number) => `${API_BASE}/export/xlsx?exam_id=${examId}`,
   getExportNoticeBoardXlsxUrl: (examId: number) => `${API_BASE}/export/notice-board-xlsx?exam_id=${examId}`,
+  getExportNoticeBoardPdfUrl: (examId: number) => `${API_BASE}/export/notice-board-pdf?exam_id=${examId}`,
   getTemplateDownloadUrl: () => `${API_BASE}/students/template`,
+
+  // Direct safe downloads via Fetch & Blob (handles CORS, errors, and prevents page redirect)
+  downloadExportPdf: async (examId: number): Promise<void> => {
+    return downloadFileFromUrl(`${API_BASE}/export/pdf?exam_id=${examId}`, `Seating_Plan_Exam_${examId}.pdf`);
+  },
+
+  downloadExportXlsx: async (examId: number): Promise<void> => {
+    return downloadFileFromUrl(`${API_BASE}/export/xlsx?exam_id=${examId}`, `Seating_Plan_Exam_${examId}.xlsx`);
+  },
+
+  downloadExportNoticeBoardXlsx: async (examId: number): Promise<void> => {
+    return downloadFileFromUrl(`${API_BASE}/export/notice-board-xlsx?exam_id=${examId}`, `Notice_Board_Exam_${examId}.xlsx`);
+  },
+
+  downloadExportNoticeBoardPdf: async (examId: number): Promise<void> => {
+    return downloadFileFromUrl(`${API_BASE}/export/notice-board-pdf?exam_id=${examId}`, `Notice_Board_Exam_${examId}.pdf`);
+  },
+
+  downloadTemplate: async (): Promise<void> => {
+    return downloadFileFromUrl(`${API_BASE}/students/template`, "candidate_register_template.xlsx");
+  },
 };
+
+/**
+ * Downloads a file cleanly by fetching it as a blob and triggering a download.
+ * If the server returns an error JSON (e.g. 400 no allocations), extracts the error message
+ * and throws it so UI components can display an error notification instead of redirecting.
+ */
+export async function downloadFileFromUrl(url: string, defaultFilename: string): Promise<void> {
+  const res = await fetch(url);
+  if (!res.ok) {
+    let errMessage = "Download failed";
+    try {
+      const errData = await res.json();
+      errMessage = errData.message || errData.detail || JSON.stringify(errData);
+    } catch {
+      errMessage = `Server error ${res.status}: ${res.statusText}`;
+    }
+    throw new Error(errMessage);
+  }
+
+  // Extract filename from Content-Disposition header if available
+  let filename = defaultFilename;
+  const disposition = res.headers.get("content-disposition") || res.headers.get("Content-Disposition");
+  if (disposition) {
+    const match = disposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';\n]+)["']?/i);
+    if (match && match[1]) {
+      filename = decodeURIComponent(match[1].trim());
+    }
+  }
+
+  const blob = await res.blob();
+  const blobUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => {
+    window.URL.revokeObjectURL(blobUrl);
+  }, 1000);
+}
+

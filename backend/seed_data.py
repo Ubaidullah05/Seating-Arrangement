@@ -6,9 +6,9 @@ backend_dir = Path(__file__).resolve().parent
 sys.path.insert(0, str(backend_dir.parent))
 
 from backend.app.database import engine, Base, SessionLocal
-from backend.app.models import Floor, Classroom, Student, Exam
+from backend.app.models import Floor, Classroom, Student, Exam, Allocation
 
-def seed_database():
+def seed_database(target_students: int = 812, force: bool = False):
     print("Checking and creating database tables...")
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
@@ -44,40 +44,63 @@ def seed_database():
 
         db.commit()
 
-        # Seed sample students if database has 0 students
+        # Seed sample students (target: 812 students = 29 classrooms x 28 capacity)
         student_count = db.query(Student).count()
-        if student_count == 0:
-            print("Seeding sample students with 16-digit register numbers...")
+        if student_count != target_students or force:
+            print(f"Clearing previous allocations and students to seed exactly {target_students} students...")
+            db.query(Allocation).delete()
+            db.query(Student).delete()
+            db.commit()
+
+            print(f"Seeding {target_students} students with 16-digit register numbers...")
             sample_branches = [
-                ("B.E. Computer Science and Engineering", ["JCS2002", "JCS2501", "JCS2502"]),
-                ("B.Tech. Artificial Intelligence and Data Science", ["JAI2001", "JAI2502", "JAI2503"]),
-                ("B.E. Electronics and Communication Engineering", ["JEC2001", "JEC2501", "JEC2502"]),
-                ("B.Tech. Information Technology", ["JIT2001", "JIT2501", "JIT2502"]),
-                ("B.E. Electrical and Electronics Engineering", ["JEE2001", "JEE2501", "JEE2502"])
-            ]
-            
-            students = []
-            base_reg = 2403310910421000
-            names = [
-                "Rasin Karthick S", "Aarav Sharma", "Diya Patel", "Aditya Krishnan", "Ananya Sundaram",
-                "Kavya Subramanian", "Rahul Nair", "Priya Menon", "Siddharth Rajan", "Sneha Balaji",
-                "Vikram Raman", "Meera Chandran", "Harish Kumar", "Rithika Venkatesh", "Gautam Pillai",
-                "Swetha Natarajan", "Arjun Varma", "Deepika Srinivasan", "Karthik Raja", "Pooja Vijay",
-                "Naveen Prasath", "Keerthana Murugan", "Dinesh K", "Sanjay Prakash", "Lavanya R",
-                "Ashwin S", "Divya M", "Manojkumar B", "Shalini T", "Vignesh G"
+                ("B.E. Computer Science and Engineering", ["CS3301", "CS3351", "CS3352"]),
+                ("B.Tech. Artificial Intelligence and Data Science", ["AD3301", "AD3351", "AD3391"]),
+                ("B.E. Electronics and Communication Engineering", ["EC3301", "EC3351", "EC3354"]),
+                ("B.Tech. Information Technology", ["IT3301", "IT3351", "IT3381"]),
+                ("B.E. Electrical and Electronics Engineering", ["EE3301", "EE3351", "EE3392"]),
+                ("B.E. Mechanical Engineering", ["ME3301", "ME3351", "ME3391"]),
+                ("B.E. Civil Engineering", ["CE3301", "CE3351", "CE3391"]),
+                ("B.Tech. Computer Science and Business Systems", ["CB3301", "CB3351", "CB3381"]),
             ]
 
-            for i in range(160): # 160 students (~6 rooms worth)
-                reg_num_str = str(base_reg + i)
+            first_names = [
+                "Aarav", "Aditya", "Akash", "Ananya", "Anirudh", "Archana", "Arjun", "Ashwin", "Bhavana", "Deepak",
+                "Deepika", "Dinesh", "Divya", "Gayathri", "Gautam", "Gokul", "Hari", "Harish", "Harini", "Janani",
+                "Karthik", "Kavya", "Keerthana", "Lavanya", "Madhavan", "Manojkumar", "Meera", "Mithun", "Naveen", "Nisha",
+                "Nithya", "Pavithra", "Pooja", "Pranav", "Prashanth", "Praveen", "Priya", "Rahul", "Rajesh", "Rakshita",
+                "Rasin", "Rithika", "Rohit", "Sai", "Sanjay", "Santhosh", "Saravanan", "Shalini", "Shravan", "Siddharth",
+                "Sneha", "Srikanth", "Srinath", "Subhash", "Suresh", "Surya", "Swetha", "Tejas", "Varun", "Vignesh",
+                "Vijay", "Vikram", "Vinoth", "Vishal", "Yogesh"
+            ]
+
+            last_names = [
+                "Sharma", "Patel", "Krishnan", "Sundaram", "Subramanian", "Nair", "Menon", "Rajan", "Balaji", "Raman",
+                "Chandran", "Kumar", "Venkatesh", "Pillai", "Natarajan", "Varma", "Srinivasan", "Raja", "Vijay", "Prasath",
+                "Murugan", "Prakash", "Karthick", "Swaminathan", "Ramachandran", "Anand", "Iyer", "Mani", "Selvam",
+                "Pandian", "Reddy", "Chowdhury", "Das", "Bose", "Banerjee", "Gupta", "Malhotra", "Joshi", "Bhat", "Verma"
+            ]
+
+            students = []
+            for i in range(target_students):
+                # 16-digit register number: 2403310910420001 to 2403310910420812
+                reg_num_str = f"240331091042{i+1:04d}"
+                
+                # Assign branch and subject code round-robin
                 b_idx = i % len(sample_branches)
                 branch_name, sub_codes = sample_branches[b_idx]
-                name = names[i % len(names)] + (f" ({i+1})" if i >= len(names) else "")
-                sub = sub_codes[i % len(sub_codes)]
+                sub = sub_codes[(i // len(sample_branches)) % len(sub_codes)]
+
+                # Generate distinct realistic names
+                fn = first_names[i % len(first_names)]
+                ln = last_names[(i // len(first_names)) % len(last_names)]
+                suffix = f" {chr(65 + (i % 26))}." if (i // (len(first_names) * len(last_names))) > 0 else ""
+                full_name = f"{fn} {ln}{suffix}"
 
                 students.append(
                     Student(
                         register_no=reg_num_str,
-                        name=name,
+                        name=full_name,
                         branch=branch_name,
                         semester=5,
                         subject_code=sub
@@ -86,7 +109,7 @@ def seed_database():
 
             db.add_all(students)
             db.commit()
-            print(f"Successfully seeded {len(students)} sample students.")
+            print(f"Successfully seeded {len(students)} students into the database.")
         else:
             print(f"Database already has {student_count} students.")
 
@@ -98,4 +121,9 @@ def seed_database():
         db.close()
 
 if __name__ == "__main__":
-    seed_database()
+    force_run = "--force" in sys.argv
+    count = 812
+    for arg in sys.argv[1:]:
+        if arg.isdigit():
+            count = int(arg)
+    seed_database(target_students=count, force=force_run)
