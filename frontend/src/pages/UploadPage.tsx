@@ -10,8 +10,7 @@ import {
   XCircle, 
   Info,
   Trash2,
-  ArrowRight,
-  Download
+  ArrowRight
 } from "lucide-react";
 
 export const UploadPage: React.FC = () => {
@@ -56,14 +55,6 @@ export const UploadPage: React.FC = () => {
     },
   });
 
-  const handleDownloadTemplate = async () => {
-    try {
-      await api.downloadTemplate();
-    } catch (err: any) {
-      console.error("Failed to download template:", err);
-      setStatusMessage(`Template download failed: ${err.message || "Unknown error"}`);
-    }
-  };
 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,15 +88,7 @@ export const UploadPage: React.FC = () => {
             Upload candidate files (.xlsx or .csv) for examination allocation
           </div>
         </div>
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <button
-            onClick={handleDownloadTemplate}
-            className="btn-gold"
-            title="Download pre-formatted XLSX candidate template with 16-digit text format"
-            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
-          >
-            <Download size={15} /> Download Template (.xlsx)
-          </button>
+        <div>
           <button
             onClick={() => {
               if (confirm("Are you sure you want to clear all candidate records? This will also remove any previous allocations.")) {
@@ -159,18 +142,11 @@ export const UploadPage: React.FC = () => {
                 Excel Template Required & Supported Columns
               </div>
               <div style={{ fontSize: "12px", color: "#64748b" }}>
-                Use the official .xlsx template with text-formatted cells for 16-digit register numbers
+                Ensure candidate files use text-formatted cells for 16-digit register numbers
               </div>
             </div>
           </div>
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <button
-              onClick={handleDownloadTemplate}
-              className="btn-blue"
-              style={{ fontSize: "12px", padding: "6px 14px", display: "inline-flex", alignItems: "center", gap: "6px" }}
-            >
-              <Download size={14} /> Download Template (.xlsx)
-            </button>
             <button
               onClick={() => setShowColumnsGuide(!showColumnsGuide)}
               className="btn-outline"
@@ -351,25 +327,7 @@ export const UploadPage: React.FC = () => {
             Microsoft Excel standard numeric cells only hold 15 significant digits and may corrupt the 16th digit or convert to scientific notation (<code style={{ fontFamily: "monospace" }}>2.4033E+15</code>).
           </div>
           <div style={{ marginTop: "4px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}>
-            <span>💡 Tip: Format the register number column as <u>Text</u> before saving your Excel file, or download our ready-made template:</span>
-            <button
-              onClick={handleDownloadTemplate}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#92400e",
-                fontWeight: 700,
-                cursor: "pointer",
-                textDecoration: "underline",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                padding: 0,
-                fontSize: "13px"
-              }}
-            >
-              <Download size={13} /> candidate_register_template.xlsx
-            </button>
+            <span>💡 Tip: Format the register number column as <u>Text</u> before saving your Excel file.</span>
           </div>
         </div>
       </div>
@@ -418,15 +376,6 @@ export const UploadPage: React.FC = () => {
               onChange={handleFileChange}
             />
           </label>
-
-          <button
-            type="button"
-            onClick={handleDownloadTemplate}
-            className="btn-outline"
-            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
-          >
-            <Download size={15} /> Download Template (.xlsx)
-          </button>
         </div>
 
         {selectedFile && (
