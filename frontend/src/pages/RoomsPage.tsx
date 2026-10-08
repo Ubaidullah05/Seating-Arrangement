@@ -30,7 +30,7 @@ export const RoomsPage: React.FC = () => {
         <div>
           <h1 className="portal-page-title">Classroom & Floor Configuration</h1>
           <div style={{ fontSize: "13px", color: "#64748b", marginTop: "4px" }}>
-            Manage examination halls across Ground, First, Second and Third floors
+            Manage examination halls across Ground, First, Second, Third floors, LS and VH
           </div>
         </div>
       </div>
@@ -44,7 +44,7 @@ export const RoomsPage: React.FC = () => {
       {floors && (
         <>
           {/* Floor Navigation Tabs */}
-          <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+          <div style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
             {floors.map((fl) => {
               const isSelected = activeFloor?.id === fl.id;
               const activeCount = fl.classrooms.filter(c => c.is_active).length;
@@ -100,7 +100,11 @@ export const RoomsPage: React.FC = () => {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                 <div>
                   <h3 style={{ fontFamily: "'Georgia', serif", fontSize: "16px", color: "#002f66", margin: 0 }}>
-                    {activeFloor.name} Halls (Room Series: {activeFloor.classrooms[0]?.name} – {activeFloor.classrooms[activeFloor.classrooms.length - 1]?.name})
+                    {activeFloor.name} Halls {activeFloor.classrooms.length > 0 ? (
+                      activeFloor.classrooms.length === 1
+                        ? `(Room: ${activeFloor.classrooms[0]?.name})`
+                        : `(Room Series: ${activeFloor.classrooms[0]?.name} – ${activeFloor.classrooms[activeFloor.classrooms.length - 1]?.name})`
+                    ) : ""}
                   </h3>
                   <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
                     Configure rows per column (6 or 7 rows) and enable/disable rooms for upcoming exams
@@ -108,7 +112,7 @@ export const RoomsPage: React.FC = () => {
                 </div>
 
                 <div style={{ fontSize: "12px", color: "#334155", fontWeight: 600 }}>
-                  Floor Capacity: {activeFloor.classrooms.filter(r => r.is_active).reduce((sum, r) => sum + r.capacity, 0)} Seats
+                  Capacity: {activeFloor.classrooms.filter(r => r.is_active).reduce((sum, r) => sum + r.capacity, 0)} Seats
                 </div>
               </div>
 

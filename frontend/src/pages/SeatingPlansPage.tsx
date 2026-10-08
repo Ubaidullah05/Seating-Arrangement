@@ -9,7 +9,8 @@ import {
   FileSpreadsheet, 
   Grid3X3, 
   List, 
-  ClipboardList,
+  ClipboardCheck,
+  Check,
   Loader2,
   AlertCircle,
   X
@@ -19,7 +20,29 @@ export const SeatingPlansPage: React.FC = () => {
   const [selectedExamId, setSelectedExamId] = useState<number | null>(null);
   const [selectedFloorId, setSelectedFloorId] = useState<number | null>(null);
   const [selectedClassroomId, setSelectedClassroomId] = useState<number | null>(null);
-  const [activeView, setActiveView] = useState<"grid" | "table" | "notice">("grid");
+  const [activeView, setActiveView] = useState<"grid" | "table" | "handover">("grid");
+
+  // Handover & Attendance tracking state
+  const [attendanceStatus, setAttendanceStatus] = useState<Record<string, "PRESENT" | "ABSENT">>({});
+  const [handoverStatus, setHandoverStatus] = useState<Record<string, boolean>>({});
+
+  const toggleAttendance = (regNo: string) => {
+    setAttendanceStatus(prev => ({
+      ...prev,
+      [regNo]: prev[regNo] === "ABSENT" ? "PRESENT" : "ABSENT"
+    }));
+  };
+
+  const toggleHandover = (regNo: string) => {
+    setHandoverStatus(prev => ({
+      ...prev,
+      [regNo]: prev[regNo] === false ? true : false
+    }));
+  };
+
+  const markAllPresent = () => {
+    setAttendanceStatus({});
+  };
 
   // Export download states
   const [downloading, setDownloading] = useState<"pdf" | "xlsx" | "notice-xlsx" | "notice-pdf" | null>(null);
@@ -61,19 +84,7 @@ export const SeatingPlansPage: React.FC = () => {
   const { data: roomPlan, isLoading: isPlanLoading, isError: isPlanError, error: planError } = useQuery({
     queryKey: ["room-plan", selectedExamId, selectedClassroomId],
     queryFn: () => (selectedExamId && selectedClassroomId) ? api.getRoomPlan(selectedExamId, selectedClassroomId) : null,
-    enabled: !!(selectedExamId && selectedClassroomId && activeView !== "notice"),
-  });
-
-  // Fetch Notice Board data
-  const { 
-    data: noticeBoard, 
-    isLoading: isNoticeLoading, 
-    isError: isNoticeError, 
-    error: noticeError 
-  } = useQuery({
-    queryKey: ["notice-board", selectedExamId],
-    queryFn: () => selectedExamId ? api.getNoticeBoard(selectedExamId) : null,
-    enabled: !!(selectedExamId && activeView === "notice"),
+    enabled: !!(selectedExamId && selectedClassroomId),
   });
 
   const handlePrint = () => {
@@ -111,7 +122,7 @@ export const SeatingPlansPage: React.FC = () => {
         <div>
           <h1 className="portal-page-title">Examination Seating Arrangement Plans</h1>
           <div style={{ fontSize: "13px", color: "#64748b", marginTop: "4px" }}>
-            Visual seating layout, invigilator attendance sheets and notice board rosters
+            Visual seating layout, invigilator attendance sheets and answer booklet handover forms
           </div>
         </div>
 
@@ -181,14 +192,14 @@ export const SeatingPlansPage: React.FC = () => {
                   opacity: downloading && downloading !== "notice-xlsx" ? 0.6 : 1,
                   backgroundColor: "#ffffff",
                 }}
-                title="Download Notice Board Summary Excel"
+                title="Download Hall Roster Excel"
               >
                 {downloading === "notice-xlsx" ? (
                   <Loader2 size={15} className="animate-spin" color="#0050b3" />
                 ) : (
                   <FileSpreadsheet size={15} color="#0050b3" />
                 )}
-                {downloading === "notice-xlsx" ? "Exporting Notice..." : "Notice Board (XLSX)"}
+                {downloading === "notice-xlsx" ? "Exporting Roster..." : "Hall Roster (XLSX)"}
               </button>
 
               <button
@@ -205,14 +216,14 @@ export const SeatingPlansPage: React.FC = () => {
                   opacity: downloading && downloading !== "notice-pdf" ? 0.6 : 1,
                   backgroundColor: "#ffffff",
                 }}
-                title="Download Notice Board Summary as Printable PDF"
+                title="Download Hall Roster as Printable PDF"
               >
                 {downloading === "notice-pdf" ? (
                   <Loader2 size={15} className="animate-spin" color="#b8892b" />
                 ) : (
                   <FileDown size={15} color="#b8892b" />
                 )}
-                {downloading === "notice-pdf" ? "Exporting PDF..." : "Notice Board (PDF)"}
+                {downloading === "notice-pdf" ? "Exporting PDF..." : "Hall Roster (PDF)"}
               </button>
             </>
           )}
@@ -312,65 +323,61 @@ export const SeatingPlansPage: React.FC = () => {
             </select>
           </div>
 
-          {activeView !== "notice" && (
-            <>
-              {/* Floor Selector */}
-              <div>
-                <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
-                  FLOOR LEVEL
-                </label>
-                <select
-                  value={selectedFloorId || ""}
-                  onChange={(e) => {
-                    const fid = Number(e.target.value);
-                    setSelectedFloorId(fid);
-                    const fl = floors?.find(f => f.id === fid);
-                    if (fl && fl.classrooms.length > 0) {
-                      setSelectedClassroomId(fl.classrooms[0].id);
-                    }
-                  }}
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: "4px",
-                    border: "1px solid #cbd5e1",
-                    fontSize: "13px",
-                  }}
-                >
-                  {floors?.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          {/* Floor Selector */}
+          <div>
+            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
+              FLOOR LEVEL
+            </label>
+            <select
+              value={selectedFloorId || ""}
+              onChange={(e) => {
+                const fid = Number(e.target.value);
+                setSelectedFloorId(fid);
+                const fl = floors?.find(f => f.id === fid);
+                if (fl && fl.classrooms.length > 0) {
+                  setSelectedClassroomId(fl.classrooms[0].id);
+                }
+              }}
+              style={{
+                padding: "8px 12px",
+                borderRadius: "4px",
+                border: "1px solid #cbd5e1",
+                fontSize: "13px",
+              }}
+            >
+              {floors?.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-              {/* Classroom Selector */}
-              <div>
-                <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
-                  EXAM HALL / ROOM
-                </label>
-                <select
-                  value={selectedClassroomId || ""}
-                  onChange={(e) => setSelectedClassroomId(Number(e.target.value))}
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: "4px",
-                    border: "1px solid #cbd5e1",
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    color: "#0050b3",
-                  }}
-                >
-                  {currentFloor?.classrooms.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.capacity} seats)
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
+          {/* Classroom Selector */}
+          <div>
+            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
+              EXAM HALL / ROOM
+            </label>
+            <select
+              value={selectedClassroomId || ""}
+              onChange={(e) => setSelectedClassroomId(Number(e.target.value))}
+              style={{
+                padding: "8px 12px",
+                borderRadius: "4px",
+                border: "1px solid #cbd5e1",
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "13px",
+                fontWeight: 700,
+                color: "#0050b3",
+              }}
+            >
+              {currentFloor?.classrooms.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.capacity} seats)
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* View Switcher Tabs */}
@@ -414,12 +421,12 @@ export const SeatingPlansPage: React.FC = () => {
               <List size={14} /> Attendance Table
             </button>
             <button
-              onClick={() => setActiveView("notice")}
+              onClick={() => setActiveView("handover")}
               style={{
                 padding: "7px 14px",
                 border: "none",
-                backgroundColor: activeView === "notice" ? "#0050b3" : "#ffffff",
-                color: activeView === "notice" ? "#ffffff" : "#475569",
+                backgroundColor: activeView === "handover" ? "#0050b3" : "#ffffff",
+                color: activeView === "handover" ? "#ffffff" : "#475569",
                 fontSize: "12px",
                 fontWeight: 600,
                 cursor: "pointer",
@@ -428,90 +435,14 @@ export const SeatingPlansPage: React.FC = () => {
                 gap: "5px",
               }}
             >
-              <ClipboardList size={14} /> Notice Board Summary
+              <ClipboardCheck size={14} /> Handover
             </button>
           </div>
         </div>
       </div>
 
-      {/* Notice Board View Loading / Error / Empty / Content */}
-      {activeView === "notice" && isNoticeLoading && (
-        <div style={{ padding: "60px 20px", textAlign: "center", color: "#64748b", backgroundColor: "#ffffff", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
-          <Loader2 size={32} className="animate-spin" style={{ margin: "0 auto 12px auto", color: "#0050b3" }} />
-          <div style={{ fontWeight: 600, color: "#1e293b", fontSize: "15px" }}>Loading Notice Board Summary...</div>
-          <div style={{ fontSize: "13px", marginTop: "4px" }}>Retrieving room allocations and register number ranges</div>
-        </div>
-      )}
-
-      {activeView === "notice" && isNoticeError && (
-        <div style={{ padding: "40px 20px", textAlign: "center", backgroundColor: "#ffffff", borderRadius: "6px", border: "1px solid #fecaca" }}>
-          <AlertCircle size={36} color="#dc2626" style={{ margin: "0 auto 12px auto" }} />
-          <div style={{ fontWeight: 700, color: "#991b1b", fontSize: "16px" }}>Unable to Load Notice Board</div>
-          <div style={{ fontSize: "13px", color: "#64748b", marginTop: "6px" }}>
-            {(noticeError as any)?.message || "Failed to retrieve notice board data. Please verify your connection or generate allocations."}
-          </div>
-        </div>
-      )}
-
-      {activeView === "notice" && !isNoticeLoading && !isNoticeError && noticeBoard && noticeBoard.rooms.length === 0 && (
-        <div style={{ padding: "60px 20px", textAlign: "center", backgroundColor: "#ffffff", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
-          <ClipboardList size={40} color="#94a3b8" style={{ margin: "0 auto 12px auto" }} />
-          <div style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b" }}>No Seating Allocations Found</div>
-          <div style={{ fontSize: "13px", color: "#64748b", marginTop: "6px", maxWidth: "480px", margin: "6px auto 0 auto" }}>
-            There are currently no classroom allocations generated for <strong>{noticeBoard.exam.name}</strong>.
-            Please visit the <strong>Allocation Generator</strong> tab to compute seat assignments first.
-          </div>
-        </div>
-      )}
-
-      {activeView === "notice" && !isNoticeLoading && noticeBoard && noticeBoard.rooms.length > 0 && (
-        <DocumentCard
-          documentTitle="NOTICE BOARD SEATING SUMMARY"
-          examName={noticeBoard.exam.name}
-          infoItems={[
-            { label: "EXAMINATION", value: noticeBoard.exam.name },
-            { label: "EXAM DATE", value: noticeBoard.exam.exam_date },
-            { label: "SESSION", value: noticeBoard.exam.session },
-            { label: "TOTAL CANDIDATES", value: `${noticeBoard.total_students} Students` },
-          ]}
-        >
-          <div style={{ marginTop: "16px" }}>
-            <table className="portal-table">
-              <thead>
-                <tr>
-                  <th style={{ width: "60px", textAlign: "center" }}>S.No</th>
-                  <th>Floor Level</th>
-                  <th style={{ width: "130px", textAlign: "center" }}>Hall / Room No</th>
-                  <th style={{ width: "120px", textAlign: "center" }}>Total Seats</th>
-                  <th style={{ width: "230px", textAlign: "center" }}>Starting Register No</th>
-                  <th style={{ width: "230px", textAlign: "center" }}>Ending Register No</th>
-                </tr>
-              </thead>
-              <tbody>
-                {noticeBoard.rooms.map((rm, idx) => (
-                  <tr key={idx}>
-                    <td style={{ textAlign: "center" }}>{idx + 1}</td>
-                    <td>{rm.floor_name}</td>
-                    <td className="mono-cell" style={{ textAlign: "center", color: "#004a99" }}>
-                      {rm.classroom_name}
-                    </td>
-                    <td style={{ textAlign: "center", fontWeight: 700 }}>{rm.student_count}</td>
-                    <td className="mono-cell" style={{ textAlign: "center", color: "#0f172a" }}>
-                      {rm.min_register_no || "-"}
-                    </td>
-                    <td className="mono-cell" style={{ textAlign: "center", color: "#0f172a" }}>
-                      {rm.max_register_no || "-"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </DocumentCard>
-      )}
-
       {/* Classroom Plan View Loading / Error / Content */}
-      {activeView !== "notice" && isPlanLoading && (
+      {isPlanLoading && (
         <div style={{ padding: "60px 20px", textAlign: "center", color: "#64748b", backgroundColor: "#ffffff", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
           <Loader2 size={32} className="animate-spin" style={{ margin: "0 auto 12px auto", color: "#0050b3" }} />
           <div style={{ fontWeight: 600, color: "#1e293b", fontSize: "15px" }}>Loading Hall Seating Plan...</div>
@@ -519,7 +450,7 @@ export const SeatingPlansPage: React.FC = () => {
         </div>
       )}
 
-      {activeView !== "notice" && isPlanError && (
+      {isPlanError && (
         <div style={{ padding: "40px 20px", textAlign: "center", backgroundColor: "#ffffff", borderRadius: "6px", border: "1px solid #fecaca" }}>
           <AlertCircle size={36} color="#dc2626" style={{ margin: "0 auto 12px auto" }} />
           <div style={{ fontWeight: 700, color: "#991b1b", fontSize: "16px" }}>Unable to Load Seating Plan</div>
@@ -529,9 +460,13 @@ export const SeatingPlansPage: React.FC = () => {
         </div>
       )}
 
-      {activeView !== "notice" && !isPlanLoading && roomPlan && currentExam && (
+      {!isPlanLoading && roomPlan && currentExam && (
         <DocumentCard
-          documentTitle={`SEATING ARRANGEMENT — HALL ${roomPlan.classroom_name}`}
+          documentTitle={
+            activeView === "handover"
+              ? `ANSWER SCRIPT HANDOVER SHEET — HALL ${roomPlan.classroom_name}`
+              : `SEATING ARRANGEMENT — HALL ${roomPlan.classroom_name}`
+          }
           examName={currentExam.name}
           infoItems={[
             { label: "EXAMINATION", value: currentExam.name },
@@ -541,48 +476,51 @@ export const SeatingPlansPage: React.FC = () => {
             { label: "HALL NO", value: roomPlan.classroom_name },
             { label: "TOTAL ALLOCATED", value: `${roomPlan.allocated_count} / ${roomPlan.capacity} Seats` },
             { label: "REG NO RANGE", value: `${roomPlan.min_register_no || "-"} to ${roomPlan.max_register_no || "-"}` },
-            { label: "LAYOUT", value: `4 Columns × ${roomPlan.rows_per_column} Rows` },
+            { 
+              label: activeView === "handover" ? "DOCUMENT TYPE" : "LAYOUT", 
+              value: activeView === "handover" ? "Answer Booklet Handover & Invigilator Account" : `4 Columns × ${roomPlan.rows_per_column} Rows` 
+            },
           ]}
         >
-          {activeView === "grid" ? (
+          {activeView === "grid" && (
             <SeatGrid grid={roomPlan.grid} />
-          ) : (
+          )}
+
+          {activeView === "table" && (
             <div style={{ marginTop: "16px" }}>
               <table className="portal-table">
                 <thead>
                   <tr>
-                    <th style={{ width: "50px", textAlign: "center" }}>Seat</th>
-                    <th style={{ width: "210px", textAlign: "center" }}>Register Number (16-Digit)</th>
-                    <th>Candidate Name</th>
-                    <th>Branch / Department</th>
-                    <th style={{ width: "80px", textAlign: "center" }}>Sem</th>
-                    <th style={{ width: "130px", textAlign: "center" }}>Candidate Signature</th>
+                    <th style={{ width: "60px", textAlign: "center" }}>S.no</th>
+                    <th style={{ width: "220px", textAlign: "center" }}>Register Number</th>
+                    <th>Name</th>
+                    <th style={{ width: "90px", textAlign: "center" }}>Seatno</th>
+                    <th style={{ width: "170px", textAlign: "center" }}>Candidate Signature</th>
                   </tr>
                 </thead>
                 <tbody>
                   {roomPlan.grid
                     .flatMap(row => row)
                     .filter(cell => cell.allocation)
-                    .map((cell) => {
+                    .map((cell, index) => {
                       const alloc = cell.allocation!;
                       return (
                         <tr key={cell.seat_label}>
-                          <td className="mono-cell" style={{ textAlign: "center", color: "#0050b3" }}>
-                            {cell.seat_label}
-                          </td>
+                          <td style={{ textAlign: "center", fontWeight: 600 }}>{index + 1}</td>
                           <td className="mono-cell" style={{ textAlign: "center" }}>
                             {alloc.register_no}
                           </td>
-                          <td>{alloc.student_name || "-"}</td>
-                          <td>{alloc.branch || "-"}</td>
-                          <td style={{ textAlign: "center" }}>{alloc.semester || "5"}</td>
+                          <td style={{ fontWeight: 500 }}>{alloc.student_name || "-"}</td>
+                          <td className="mono-cell" style={{ textAlign: "center", color: "#0050b3", fontWeight: 700 }}>
+                            {cell.seat_label}
+                          </td>
                           <td style={{ borderBottom: "1px solid #94a3b8" }}>&nbsp;</td>
                         </tr>
                       );
                     })}
                   {roomPlan.allocated_count === 0 && (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: "center", padding: "32px", color: "#64748b" }}>
+                      <td colSpan={5} style={{ textAlign: "center", padding: "32px", color: "#64748b" }}>
                         No students allocated to this classroom for this examination.
                       </td>
                     </tr>
@@ -591,6 +529,197 @@ export const SeatingPlansPage: React.FC = () => {
               </table>
             </div>
           )}
+
+          {activeView === "handover" && (() => {
+            const allocatedCells = roomPlan.grid.flatMap(row => row).filter(cell => cell.allocation);
+            const absentCount = allocatedCells.filter(c => attendanceStatus[c.allocation!.register_no] === "ABSENT").length;
+            const presentCount = allocatedCells.length - absentCount;
+            const handedOverCount = allocatedCells.filter(c => {
+              const reg = c.allocation!.register_no;
+              return attendanceStatus[reg] !== "ABSENT" && (handoverStatus[reg] !== false);
+            }).length;
+
+            const markAllHandedOver = () => {
+              const next: Record<string, boolean> = {};
+              allocatedCells.forEach(c => {
+                const reg = c.allocation!.register_no;
+                if (attendanceStatus[reg] !== "ABSENT") {
+                  next[reg] = true;
+                }
+              });
+              setHandoverStatus(next);
+            };
+
+            return (
+              <div style={{ marginTop: "16px" }}>
+                {/* Stats & Quick Action Bar */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+                  <div style={{ display: "flex", gap: "12px", fontSize: "12px", alignItems: "center" }}>
+                    <span><strong>Total:</strong> {roomPlan.allocated_count}</span>
+                    <span style={{ color: "#15803d", backgroundColor: "#dcfce7", padding: "2px 8px", borderRadius: "10px", fontWeight: 700 }}>
+                      Present: {presentCount}
+                    </span>
+                    <span style={{ color: "#b91c1c", backgroundColor: "#fee2e2", padding: "2px 8px", borderRadius: "10px", fontWeight: 700 }}>
+                      Absent: {absentCount}
+                    </span>
+                    <span style={{ color: "#1d4ed8", backgroundColor: "#eff6ff", padding: "2px 8px", borderRadius: "10px", fontWeight: 700 }}>
+                      Booklets Handed Over: {handedOverCount}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px" }} className="no-print">
+                    <button
+                      type="button"
+                      onClick={markAllPresent}
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        padding: "5px 10px",
+                        borderRadius: "4px",
+                        border: "1px solid #cbd5e1",
+                        backgroundColor: "#ffffff",
+                        cursor: "pointer",
+                        color: "#475569",
+                      }}
+                    >
+                      Reset All Present
+                    </button>
+                    <button
+                      type="button"
+                      onClick={markAllHandedOver}
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        padding: "5px 12px",
+                        borderRadius: "4px",
+                        border: "1px solid #0050b3",
+                        backgroundColor: "#0050b3",
+                        color: "#ffffff",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Mark All Handed Over
+                    </button>
+                  </div>
+                </div>
+
+                {/* Handover Table: S.no, Register Number, Name, Seatno, Status, Handover */}
+                <table className="portal-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: "60px", textAlign: "center" }}>S.no</th>
+                      <th style={{ width: "220px", textAlign: "center" }}>Register Number</th>
+                      <th>Name</th>
+                      <th style={{ width: "90px", textAlign: "center" }}>Seatno</th>
+                      <th style={{ width: "130px", textAlign: "center" }}>Status</th>
+                      <th style={{ width: "160px", textAlign: "center" }}>Handover</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allocatedCells.map((cell, index) => {
+                      const alloc = cell.allocation!;
+                      const isAbsent = attendanceStatus[alloc.register_no] === "ABSENT";
+                      const isHandedOver = !isAbsent && (handoverStatus[alloc.register_no] !== false);
+
+                      return (
+                        <tr key={cell.seat_label} style={{ opacity: isAbsent ? 0.6 : 1 }}>
+                          <td style={{ textAlign: "center", fontWeight: 600 }}>{index + 1}</td>
+                          <td className="mono-cell" style={{ textAlign: "center" }}>
+                            {alloc.register_no}
+                          </td>
+                          <td style={{ fontWeight: 500 }}>{alloc.student_name || "-"}</td>
+                          <td className="mono-cell" style={{ textAlign: "center", color: "#0050b3", fontWeight: 700 }}>
+                            {cell.seat_label}
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            <button
+                              type="button"
+                              onClick={() => toggleAttendance(alloc.register_no)}
+                              title="Click to toggle Present/Absent"
+                              style={{
+                                padding: "4px 10px",
+                                borderRadius: "12px",
+                                fontSize: "11px",
+                                fontWeight: 700,
+                                border: "none",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                backgroundColor: isAbsent ? "#fee2e2" : "#dcfce7",
+                                color: isAbsent ? "#b91c1c" : "#15803d",
+                              }}
+                            >
+                              {isAbsent ? "ABSENT" : "PRESENT"}
+                            </button>
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            <button
+                              type="button"
+                              onClick={() => toggleHandover(alloc.register_no)}
+                              disabled={isAbsent}
+                              title="Click to toggle booklet handover confirmation"
+                              style={{
+                                padding: "4px 10px",
+                                borderRadius: "4px",
+                                fontSize: "11px",
+                                fontWeight: 700,
+                                border: isAbsent ? "1px solid #e2e8f0" : (isHandedOver ? "1px solid #93c5fd" : "1px solid #fcd34d"),
+                                cursor: isAbsent ? "not-allowed" : "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "5px",
+                                backgroundColor: isAbsent ? "#f8fafc" : (isHandedOver ? "#eff6ff" : "#fffbeb"),
+                                color: isAbsent ? "#94a3b8" : (isHandedOver ? "#1d4ed8" : "#b45309"),
+                              }}
+                            >
+                              {isHandedOver && !isAbsent ? <Check size={12} /> : null}
+                              {isAbsent ? "N/A" : (isHandedOver ? "Handed Over" : "Pending")}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {roomPlan.allocated_count === 0 && (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: "center", padding: "32px", color: "#64748b" }}>
+                          No students allocated to this classroom for this examination.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+
+                {/* Handover Official Verification Sign-off Box */}
+                <div style={{ marginTop: "32px", borderTop: "1px dashed #cbd5e1", paddingTop: "20px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "32px" }}>
+                    <div style={{ border: "1px solid #e2e8f0", padding: "16px", borderRadius: "4px", backgroundColor: "#fafbfc" }}>
+                      <div style={{ fontSize: "11px", fontWeight: 700, color: "#002f66" }}>HALL INVIGILATOR DECLARATION</div>
+                      <div style={{ fontSize: "12px", color: "#334155", marginTop: "6px" }}>
+                        I hereby certify that all answer booklets of present candidates ({presentCount} scripts) have been collected, accounted for, and handed over.
+                      </div>
+                      <div style={{ marginTop: "32px", borderBottom: "1px solid #94a3b8", width: "100%" }}></div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#64748b", marginTop: "4px" }}>
+                        <span>Invigilator Signature & Name</span>
+                        <span>Date & Time</span>
+                      </div>
+                    </div>
+
+                    <div style={{ border: "1px solid #e2e8f0", padding: "16px", borderRadius: "4px", backgroundColor: "#fafbfc" }}>
+                      <div style={{ fontSize: "11px", fontWeight: 700, color: "#002f66" }}>EXAM CELL / COE OFFICE ACKNOWLEDGEMENT</div>
+                      <div style={{ fontSize: "12px", color: "#334155", marginTop: "6px" }}>
+                        Received {handedOverCount} answer booklets for Hall {roomPlan.classroom_name}. Packets verified against the student seating roster.
+                      </div>
+                      <div style={{ marginTop: "32px", borderBottom: "1px solid #94a3b8", width: "100%" }}></div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#64748b", marginTop: "4px" }}>
+                        <span>Exam Cell Officer Signature</span>
+                        <span>Receipt Stamp / Time</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </DocumentCard>
       )}
 

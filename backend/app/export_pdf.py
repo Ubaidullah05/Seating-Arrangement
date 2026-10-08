@@ -232,23 +232,25 @@ def generate_seating_pdf(allocations: List[Allocation], exam: Exam) -> io.BytesI
 
         table_data = [
             [
-                Paragraph("<b>Seat</b>", cell_center_style),
-                Paragraph("<b>Register Number (16 Digits)</b>", cell_center_style),
-                Paragraph("<b>Student Name</b>", cell_text_style),
-                Paragraph("<b>Branch / Dept</b>", cell_text_style),
+                Paragraph("<b>S.No</b>", cell_center_style),
+                Paragraph("<b>Register Number</b>", cell_center_style),
+                Paragraph("<b>Name</b>", cell_text_style),
+                Paragraph("<b>Seat No</b>", cell_center_style),
+                Paragraph("<b>Candidate Signature</b>", cell_center_style),
             ]
         ]
 
-        for a in sorted_room_allocs:
+        for s_idx, a in enumerate(sorted_room_allocs, start=1):
             st = a.student
             table_data.append([
-                Paragraph(f"<b>{a.seat_label}</b>", cell_center_style),
+                Paragraph(f"{s_idx}", cell_center_style),
                 Paragraph(f"<b>{st.register_no if st else ''}</b>", cell_mono_style),
                 Paragraph(f"{st.name if (st and st.name) else '-'}", cell_text_style),
-                Paragraph(f"{st.branch if (st and st.branch) else '-'}", cell_text_style),
+                Paragraph(f"<b>{a.seat_label}</b>", cell_center_style),
+                Paragraph("", cell_text_style),
             ])
 
-        col_w = [18 * mm, 58 * mm, 60 * mm, 44 * mm]
+        col_w = [14 * mm, 46 * mm, 54 * mm, 24 * mm, 42 * mm]
         seats_table = Table(table_data, colWidths=col_w, repeatRows=1)
         seats_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#eef2f8")),

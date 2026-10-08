@@ -2,10 +2,35 @@ from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, or_
 from backend.app.models import Student, Floor, Classroom, Exam, Allocation
-from backend.app.schemas import StudentCreate, ClassroomUpdate, ExamCreate
+from backend.app.schemas import StudentCreate, ClassroomUpdate, ExamCreate, ClassroomCreate, FloorCreate
 
 def get_floors(db: Session) -> List[Floor]:
     return db.query(Floor).order_by(Floor.floor_number).all()
+
+def create_floor(db: Session, floor_in: FloorCreate) -> Floor:
+    if floor_in.floor_number is None:
+        max_num = db.query(func.max(Floor.floor_number)).scalar()
+        floor_number = (max_num + 1) if max_num is not None else 0
+    else:
+        floor_number = floor_in.floor_number
+    floor = Floor(name=floor_in.name, floor_number=floor_number)
+    db.add(floor)
+    db.commit()
+    db.refresh(floor)
+    return floor
+
+def create_classroom(db: Session, room_in: ClassroomCreate) -> Classroom:
+    room = Classroom(
+        floor_id=room_in.floor_id,
+        name=room_in.name,
+        columns=room_in.columns,
+        rows_per_column=room_in.rows_per_column,
+        is_active=room_in.is_active
+    )
+    db.add(room)
+    db.commit()
+    db.refresh(room)
+    return room
 
 def get_classrooms(db: Session, active_only: bool = False) -> List[Classroom]:
     q = db.query(Classroom).options(joinedload(Classroom.floor)).order_by(Classroom.name)

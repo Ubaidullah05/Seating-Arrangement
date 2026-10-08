@@ -61,6 +61,9 @@ class ClassroomBase(BaseModel):
     rows_per_column: int = 7
     is_active: bool = True
 
+class ClassroomCreate(ClassroomBase):
+    floor_id: int
+
 class ClassroomUpdate(BaseModel):
     rows_per_column: Optional[int] = Field(None, ge=5, le=8)
     is_active: Optional[bool] = None
@@ -71,6 +74,10 @@ class ClassroomResponse(ClassroomBase):
     capacity: int
 
     model_config = ConfigDict(from_attributes=True)
+
+class FloorCreate(BaseModel):
+    name: str
+    floor_number: Optional[int] = None
 
 class FloorResponse(BaseModel):
     id: int
