@@ -22,6 +22,9 @@ A complete full-stack web application called **"Exam Seating Planner"** was desi
    - **First Floor**: Rooms **`M101` through `M108`** (8 halls).
    - **Second Floor**: Rooms **`M201` through `M208`** (8 halls).
    - **Third Floor**: Rooms **`M301` through `M305`** (5 halls).
+   - **LS Block**: Room **`LS-1`** (1 hall).
+   - **VH Block**: Rooms **`VH-1`, `VH-2`, `VH-3`** (3 halls).
+   - Total examination capacity: **33 halls** (up to 924 students).
    - 4 seat columns (`A`, `B`, `C`, `D`) with configurable 6 or 7 rows (24 to 28 seats).
 3. **16-Digit Register Number Text & Excel Precision Safeguard**:
    - Database: `VARCHAR(16)` with `CHECK (length(register_no) = 16)` and regex pattern `^[0-9]{16}$`.
@@ -34,10 +37,15 @@ A complete full-stack web application called **"Exam Seating Planner"** was desi
    - Random shuffling with reproducible integer seeds and **"Re-shuffle with New Seed"** support.
    - Academic branch interleaving to ensure adjacent students do not belong to the same department.
    - Atomic database transactions.
-5. **PDF & Excel Exports**:
-   - Multi-page ReportLab PDF (1 classroom per page in official document card format with watermarks).
+5. **Invigilator Attendance & Handover Workflow**:
+   - **Attendance Table**: Formatted to clean 5-column layout: `S.no`, `Register Number`, `Name`, `Seatno`, and `Candidate Signature`.
+   - **Answer Script Handover Sheet**: Hall-wise Answer Booklet Handover Sheet.
+   - Attributes: `sno`, `reg_no`, `name`, `seatno`, `status` (blank cell for invigilator entry), and `handover` (blank cell for answer booklet verification/signature).
+   - Official Invigilator & COE receipt sign-off blocks.
+6. **PDF & Excel Exports**:
+   - Multi-page ReportLab PDF (1 classroom per page in official document card format with watermarks and updated signature/seat columns).
    - Hall-wise XLSX export with text register numbers.
-   - Notice Board summary roster with string-sorted register number ranges per room.
+   - Hall roster exports with string-sorted register number ranges per room.
 
 ---
 
@@ -124,13 +132,13 @@ Seating-Arrangement/
    - `created_at`: DateTime
 2. **`floors`**:
    - `id`: Integer Primary Key
-   - `name`: VARCHAR(50) (`"Ground Floor"`, `"First Floor"`, `"Second Floor"`, `"Third Floor"`)
-   - `floor_number`: Integer UNIQUE (`0`, `1`, `2`, `3`)
+   - `name`: VARCHAR(50) (`"Ground Floor"`, `"First Floor"`, `"Second Floor"`, `"Third Floor"`, `"LS"`, `"VH"`)
+   - `floor_number`: Integer UNIQUE (`0`, `1`, `2`, `3`, `4`, `5`)
    - `created_at`: DateTime
 3. **`classrooms`**:
    - `id`: Integer Primary Key
    - `floor_id`: Integer ForeignKey(`floors.id`, ondelete='CASCADE')
-   - `name`: VARCHAR(50) UNIQUE (`"M001"`–`"M008"`, `"M101"`–`"M108"`, `"M201"`–`"M208"`, `"M301"`–`"M305"`)
+   - `name`: VARCHAR(50) UNIQUE (`"M001"`–`"M008"`, `"M101"`–`"M108"`, `"M201"`–`"M208"`, `"M301"`–`"M305"`, `"LS-1"`, `"VH-1"`–`"VH-3"`)
    - `columns`: Integer (Default: 4 for A, B, C, D)
    - `rows_per_column`: Integer (6 or 7 rows)
    - `is_active`: Boolean (Default: True)
@@ -166,16 +174,19 @@ Seating-Arrangement/
 | `GET` | `/api/v1/students` | Lists registered candidates |
 | `DELETE` | `/api/v1/students/all` | Clears all registered candidates |
 | `GET` | `/api/v1/students/search` | Searches candidate by full/partial register number or name |
-| `GET` | `/api/v1/classrooms/floors` | Lists 4 floors and 29 classrooms |
+| `GET` | `/api/v1/classrooms/floors` | Lists all 6 floors/blocks and 33 classrooms |
+| `POST` | `/api/v1/classrooms/floors` | Creates a new floor / block |
 | `GET` | `/api/v1/classrooms` | Lists all classrooms |
+| `POST` | `/api/v1/classrooms` | Creates a new classroom |
 | `PATCH` | `/api/v1/classrooms/{id}` | Updates room row count (6/7) or toggles active status |
 | `GET` | `/api/v1/exams` | Lists all examination sessions |
 | `POST` | `/api/v1/allocations/generate` | Executes randomized balanced allocation |
 | `GET` | `/api/v1/allocations/room-plan` | Returns 2D grid matrix of room seats (`A1`–`D7`) |
 | `GET` | `/api/v1/allocations/notice-board` | Returns room-wise register number ranges |
-| `GET` | `/api/v1/export/pdf` | Streams ReportLab multi-page A4 classroom PDF |
+| `GET` | `/api/v1/export/pdf` | Streams ReportLab multi-page A4 classroom PDF (with S.No, Seat No, Signature) |
 | `GET` | `/api/v1/export/xlsx` | Streams OpenPyXL hall allocation spreadsheet |
-| `GET` | `/api/v1/export/notice-board-xlsx` | Streams notice board summary spreadsheet |
+| `GET` | `/api/v1/export/notice-board-xlsx` | Streams hall roster summary spreadsheet |
+| `GET` | `/api/v1/export/notice-board-pdf` | Streams hall roster printable PDF |
 
 ---
 
@@ -187,6 +198,16 @@ Run tests with `python -m pytest backend/tests -v`.
 backend/tests/test_allocation.py::test_allocation_even_distribution PASSED
 backend/tests/test_allocation.py::test_allocation_no_duplicate_seats_or_students PASSED
 backend/tests/test_allocation.py::test_allocation_capacity_exceeded_error PASSED
+backend/tests/test_export.py::test_export_pdf_success PASSED
+backend/tests/test_export.py::test_export_xlsx_success PASSED
+backend/tests/test_export.py::test_export_notice_board_xlsx_success PASSED
+backend/tests/test_export.py::test_export_notice_board_pdf_success PASSED
+backend/tests/test_export.py::test_export_no_allocations_returns_400 PASSED
+backend/tests/test_export.py::test_export_with_em_dash_in_exam_name PASSED
+backend/tests/test_template.py::test_download_template_xlsx_structure PASSED
+backend/tests/test_template.py::test_download_template_csv_fallback PASSED
+backend/tests/test_template.py::test_download_template_invalid_format PASSED
+backend/tests/test_template.py::test_download_template_headers PASSED
 backend/tests/test_validation.py::test_valid_16_digit_register_no PASSED
 backend/tests/test_validation.py::test_preserve_leading_zeros PASSED
 backend/tests/test_validation.py::test_leading_apostrophe_stripped PASSED
@@ -195,7 +216,7 @@ backend/tests/test_validation.py::test_reject_17_digits PASSED
 backend/tests/test_validation.py::test_reject_letters PASSED
 backend/tests/test_validation.py::test_reject_scientific_notation PASSED
 backend/tests/test_validation.py::test_reject_float_string PASSED
-====================== 11 passed in 8.10s =======================
+====================== 21 passed in 1.35s =======================
 ```
 
 ---
@@ -214,3 +235,49 @@ cd frontend
 npm run dev -- --host 127.0.0.1 --port 5173
 ```
 - Portal URL: `http://127.0.0.1:5173`
+
+---
+
+## 7. Recent Updates & Changelog
+
+### Phase 2 Enhancements (October 2026)
+
+#### 1. Examination Infrastructure Expansion: LS & VH Blocks
+- **New Examination Halls**:
+  - **LS Block**: `LS-1` (28 seats, 4 columns × 7 rows).
+  - **VH Block**: `VH-1`, `VH-2`, `VH-3` (28 seats each, 4 columns × 7 rows).
+  - Total college capacity expanded from 29 halls (812 seats) to **33 halls** (924 seats).
+- **Floor Navigation UI**:
+  - In `RoomsPage.tsx`, added two separate dedicated filter buttons for **`LS`** (`1/1 Halls`) and **`VH`** (`3/3 Halls`).
+  - Added responsive flex-wrapping so all 6 floor buttons render seamlessly across screen widths.
+  - Dynamically formats single-room titles (e.g. `(Room: LS-1)`) versus multi-room series (e.g. `(Room Series: VH-1 – VH-3)`).
+- **Backend API & Seeding**:
+  - Added `FloorCreate` and `ClassroomCreate` schemas in `schemas.py`.
+  - Implemented `create_floor` and `create_classroom` in `crud.py`.
+  - Added `POST /api/v1/classrooms/floors` and `POST /api/v1/classrooms` endpoints.
+  - Updated `backend/seed_data.py` to seed `LS` and `VH` blocks into `exam_seating.db`.
+
+#### 2. Standardized Attendance Table Layout
+- Replaced the previous 6-column layout with the standard 5-column examination attendance layout in `SeatingPlansPage.tsx`:
+  1. **`S.no`**: Sequential 1-based candidate index
+  2. **`Register Number`**: 16-digit monospace text
+  3. **`Name`**: Candidate student name
+  4. **`Seatno`**: Assigned seat identifier (`A1`, `B1`, etc.)
+  5. **`Candidate Signature`**: Clean blank signature field with bottom border
+- Aligned ReportLab PDF export (`generate_seating_pdf` in `export_pdf.py`) with matching columns.
+
+#### 3. Examination Answer Script Handover Sheet
+- **Notice Board Replacement**:
+  - Removed Notice Board Summary from the Display Format switcher.
+  - Introduced the dedicated **Handover** sheet (`activeView === "handover"`).
+  - Maintained Floor Level and Exam Hall selectors so staff can view and print the Handover sheet for any examination hall.
+- **Table Column Attributes**:
+  1. **`sno`** (`S.no`): 1-based sequential row index
+  2. **`reg_no`** (`Register Number`): 16-digit student register number
+  3. **`name`** (`Name`): Candidate name
+  4. **`seatno`** (`Seatno`): Assigned seat code
+  5. **`status`** (`Status`): Kept completely **blank** in all rows for physical manual entry by the hall invigilator
+  6. **`handover`** (`Handover`): Kept completely **blank** in all rows for physical manual answer booklet receipt/tick verification
+- **Official Sign-off Blocks**:
+  - Printable **Hall Invigilator Declaration** block (signature, name, date, and time).
+  - Printable **Exam Cell / COE Office Acknowledgement** receipt block (officer signature and receipt stamp).

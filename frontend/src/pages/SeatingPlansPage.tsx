@@ -10,7 +10,6 @@ import {
   Grid3X3, 
   List, 
   ClipboardCheck,
-  Check,
   Loader2,
   AlertCircle,
   X
@@ -21,28 +20,6 @@ export const SeatingPlansPage: React.FC = () => {
   const [selectedFloorId, setSelectedFloorId] = useState<number | null>(null);
   const [selectedClassroomId, setSelectedClassroomId] = useState<number | null>(null);
   const [activeView, setActiveView] = useState<"grid" | "table" | "handover">("grid");
-
-  // Handover & Attendance tracking state
-  const [attendanceStatus, setAttendanceStatus] = useState<Record<string, "PRESENT" | "ABSENT">>({});
-  const [handoverStatus, setHandoverStatus] = useState<Record<string, boolean>>({});
-
-  const toggleAttendance = (regNo: string) => {
-    setAttendanceStatus(prev => ({
-      ...prev,
-      [regNo]: prev[regNo] === "ABSENT" ? "PRESENT" : "ABSENT"
-    }));
-  };
-
-  const toggleHandover = (regNo: string) => {
-    setHandoverStatus(prev => ({
-      ...prev,
-      [regNo]: prev[regNo] === false ? true : false
-    }));
-  };
-
-  const markAllPresent = () => {
-    setAttendanceStatus({});
-  };
 
   // Export download states
   const [downloading, setDownloading] = useState<"pdf" | "xlsx" | "notice-xlsx" | "notice-pdf" | null>(null);
@@ -532,73 +509,13 @@ export const SeatingPlansPage: React.FC = () => {
 
           {activeView === "handover" && (() => {
             const allocatedCells = roomPlan.grid.flatMap(row => row).filter(cell => cell.allocation);
-            const absentCount = allocatedCells.filter(c => attendanceStatus[c.allocation!.register_no] === "ABSENT").length;
-            const presentCount = allocatedCells.length - absentCount;
-            const handedOverCount = allocatedCells.filter(c => {
-              const reg = c.allocation!.register_no;
-              return attendanceStatus[reg] !== "ABSENT" && (handoverStatus[reg] !== false);
-            }).length;
-
-            const markAllHandedOver = () => {
-              const next: Record<string, boolean> = {};
-              allocatedCells.forEach(c => {
-                const reg = c.allocation!.register_no;
-                if (attendanceStatus[reg] !== "ABSENT") {
-                  next[reg] = true;
-                }
-              });
-              setHandoverStatus(next);
-            };
 
             return (
               <div style={{ marginTop: "16px" }}>
-                {/* Stats & Quick Action Bar */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
-                  <div style={{ display: "flex", gap: "12px", fontSize: "12px", alignItems: "center" }}>
-                    <span><strong>Total:</strong> {roomPlan.allocated_count}</span>
-                    <span style={{ color: "#15803d", backgroundColor: "#dcfce7", padding: "2px 8px", borderRadius: "10px", fontWeight: 700 }}>
-                      Present: {presentCount}
-                    </span>
-                    <span style={{ color: "#b91c1c", backgroundColor: "#fee2e2", padding: "2px 8px", borderRadius: "10px", fontWeight: 700 }}>
-                      Absent: {absentCount}
-                    </span>
-                    <span style={{ color: "#1d4ed8", backgroundColor: "#eff6ff", padding: "2px 8px", borderRadius: "10px", fontWeight: 700 }}>
-                      Booklets Handed Over: {handedOverCount}
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", gap: "8px" }} className="no-print">
-                    <button
-                      type="button"
-                      onClick={markAllPresent}
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 600,
-                        padding: "5px 10px",
-                        borderRadius: "4px",
-                        border: "1px solid #cbd5e1",
-                        backgroundColor: "#ffffff",
-                        cursor: "pointer",
-                        color: "#475569",
-                      }}
-                    >
-                      Reset All Present
-                    </button>
-                    <button
-                      type="button"
-                      onClick={markAllHandedOver}
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 600,
-                        padding: "5px 12px",
-                        borderRadius: "4px",
-                        border: "1px solid #0050b3",
-                        backgroundColor: "#0050b3",
-                        color: "#ffffff",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Mark All Handed Over
-                    </button>
+                {/* Information Header */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                  <div style={{ fontSize: "12px", color: "#334155" }}>
+                    <strong>Total Allocated:</strong> {roomPlan.allocated_count} Candidates
                   </div>
                 </div>
 
@@ -617,11 +534,9 @@ export const SeatingPlansPage: React.FC = () => {
                   <tbody>
                     {allocatedCells.map((cell, index) => {
                       const alloc = cell.allocation!;
-                      const isAbsent = attendanceStatus[alloc.register_no] === "ABSENT";
-                      const isHandedOver = !isAbsent && (handoverStatus[alloc.register_no] !== false);
 
                       return (
-                        <tr key={cell.seat_label} style={{ opacity: isAbsent ? 0.6 : 1 }}>
+                        <tr key={cell.seat_label}>
                           <td style={{ textAlign: "center", fontWeight: 600 }}>{index + 1}</td>
                           <td className="mono-cell" style={{ textAlign: "center" }}>
                             {alloc.register_no}
@@ -630,52 +545,8 @@ export const SeatingPlansPage: React.FC = () => {
                           <td className="mono-cell" style={{ textAlign: "center", color: "#0050b3", fontWeight: 700 }}>
                             {cell.seat_label}
                           </td>
-                          <td style={{ textAlign: "center" }}>
-                            <button
-                              type="button"
-                              onClick={() => toggleAttendance(alloc.register_no)}
-                              title="Click to toggle Present/Absent"
-                              style={{
-                                padding: "4px 10px",
-                                borderRadius: "12px",
-                                fontSize: "11px",
-                                fontWeight: 700,
-                                border: "none",
-                                cursor: "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                backgroundColor: isAbsent ? "#fee2e2" : "#dcfce7",
-                                color: isAbsent ? "#b91c1c" : "#15803d",
-                              }}
-                            >
-                              {isAbsent ? "ABSENT" : "PRESENT"}
-                            </button>
-                          </td>
-                          <td style={{ textAlign: "center" }}>
-                            <button
-                              type="button"
-                              onClick={() => toggleHandover(alloc.register_no)}
-                              disabled={isAbsent}
-                              title="Click to toggle booklet handover confirmation"
-                              style={{
-                                padding: "4px 10px",
-                                borderRadius: "4px",
-                                fontSize: "11px",
-                                fontWeight: 700,
-                                border: isAbsent ? "1px solid #e2e8f0" : (isHandedOver ? "1px solid #93c5fd" : "1px solid #fcd34d"),
-                                cursor: isAbsent ? "not-allowed" : "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "5px",
-                                backgroundColor: isAbsent ? "#f8fafc" : (isHandedOver ? "#eff6ff" : "#fffbeb"),
-                                color: isAbsent ? "#94a3b8" : (isHandedOver ? "#1d4ed8" : "#b45309"),
-                              }}
-                            >
-                              {isHandedOver && !isAbsent ? <Check size={12} /> : null}
-                              {isAbsent ? "N/A" : (isHandedOver ? "Handed Over" : "Pending")}
-                            </button>
-                          </td>
+                          <td style={{ textAlign: "center" }}>&nbsp;</td>
+                          <td style={{ textAlign: "center" }}>&nbsp;</td>
                         </tr>
                       );
                     })}
@@ -695,7 +566,7 @@ export const SeatingPlansPage: React.FC = () => {
                     <div style={{ border: "1px solid #e2e8f0", padding: "16px", borderRadius: "4px", backgroundColor: "#fafbfc" }}>
                       <div style={{ fontSize: "11px", fontWeight: 700, color: "#002f66" }}>HALL INVIGILATOR DECLARATION</div>
                       <div style={{ fontSize: "12px", color: "#334155", marginTop: "6px" }}>
-                        I hereby certify that all answer booklets of present candidates ({presentCount} scripts) have been collected, accounted for, and handed over.
+                        I hereby certify that all answer booklets of present candidates have been collected, accounted for, and handed over.
                       </div>
                       <div style={{ marginTop: "32px", borderBottom: "1px solid #94a3b8", width: "100%" }}></div>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#64748b", marginTop: "4px" }}>
@@ -707,7 +578,7 @@ export const SeatingPlansPage: React.FC = () => {
                     <div style={{ border: "1px solid #e2e8f0", padding: "16px", borderRadius: "4px", backgroundColor: "#fafbfc" }}>
                       <div style={{ fontSize: "11px", fontWeight: 700, color: "#002f66" }}>EXAM CELL / COE OFFICE ACKNOWLEDGEMENT</div>
                       <div style={{ fontSize: "12px", color: "#334155", marginTop: "6px" }}>
-                        Received {handedOverCount} answer booklets for Hall {roomPlan.classroom_name}. Packets verified against the student seating roster.
+                        Received answer booklets for Hall {roomPlan.classroom_name}. Packets verified against the student seating roster.
                       </div>
                       <div style={{ marginTop: "32px", borderBottom: "1px solid #94a3b8", width: "100%" }}></div>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#64748b", marginTop: "4px" }}>
