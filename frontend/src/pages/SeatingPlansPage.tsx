@@ -22,7 +22,7 @@ export const SeatingPlansPage: React.FC = () => {
   const [activeView, setActiveView] = useState<"grid" | "table" | "handover">("grid");
 
   // Export download states
-  const [downloading, setDownloading] = useState<"pdf" | "xlsx" | "notice-xlsx" | "notice-pdf" | null>(null);
+  const [downloading, setDownloading] = useState<"pdf" | "xlsx" | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
   // Fetch Exams
@@ -68,7 +68,7 @@ export const SeatingPlansPage: React.FC = () => {
     window.print();
   };
 
-  const handleDownload = async (type: "pdf" | "xlsx" | "notice-xlsx" | "notice-pdf") => {
+  const handleDownload = async (type: "pdf" | "xlsx") => {
     if (!selectedExamId) return;
     setDownloading(type);
     setDownloadError(null);
@@ -77,10 +77,6 @@ export const SeatingPlansPage: React.FC = () => {
         await api.downloadExportPdf(selectedExamId);
       } else if (type === "xlsx") {
         await api.downloadExportXlsx(selectedExamId);
-      } else if (type === "notice-xlsx") {
-        await api.downloadExportNoticeBoardXlsx(selectedExamId);
-      } else if (type === "notice-pdf") {
-        await api.downloadExportNoticeBoardPdf(selectedExamId);
       }
     } catch (err: any) {
       console.error("Export error:", err);
@@ -155,53 +151,6 @@ export const SeatingPlansPage: React.FC = () => {
                 {downloading === "xlsx" ? "Exporting Excel..." : "Export Excel (XLSX)"}
               </button>
 
-              <button
-                type="button"
-                onClick={() => handleDownload("notice-xlsx")}
-                disabled={!!downloading}
-                className="btn-outline"
-                style={{
-                  fontSize: "12px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  cursor: downloading ? "not-allowed" : "pointer",
-                  opacity: downloading && downloading !== "notice-xlsx" ? 0.6 : 1,
-                  backgroundColor: "#ffffff",
-                }}
-                title="Download Hall Roster Excel"
-              >
-                {downloading === "notice-xlsx" ? (
-                  <Loader2 size={15} className="animate-spin" color="#0050b3" />
-                ) : (
-                  <FileSpreadsheet size={15} color="#0050b3" />
-                )}
-                {downloading === "notice-xlsx" ? "Exporting Roster..." : "Hall Roster (XLSX)"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleDownload("notice-pdf")}
-                disabled={!!downloading}
-                className="btn-outline"
-                style={{
-                  fontSize: "12px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  cursor: downloading ? "not-allowed" : "pointer",
-                  opacity: downloading && downloading !== "notice-pdf" ? 0.6 : 1,
-                  backgroundColor: "#ffffff",
-                }}
-                title="Download Hall Roster as Printable PDF"
-              >
-                {downloading === "notice-pdf" ? (
-                  <Loader2 size={15} className="animate-spin" color="#b8892b" />
-                ) : (
-                  <FileDown size={15} color="#b8892b" />
-                )}
-                {downloading === "notice-pdf" ? "Exporting PDF..." : "Hall Roster (PDF)"}
-              </button>
             </>
           )}
 
