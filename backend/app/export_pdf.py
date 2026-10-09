@@ -1,14 +1,15 @@
 import io
+import re
 from typing import List, Dict
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import inch, mm
+from reportlab.lib.units import mm
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 )
 from reportlab.pdfgen import canvas
-from backend.app.models import Allocation, Exam, Classroom
+from backend.app.models import Allocation, Exam
 
 class NumberedCanvas(canvas.Canvas):
     """
@@ -231,7 +232,6 @@ def generate_seating_pdf(allocations: List[Allocation], exam: Exam) -> io.BytesI
         def seat_sort_key(a: Allocation):
             if not a.seat_label:
                 return ("", 0)
-            import re
             m = re.match(r"^([A-Za-z]+)(\d+)$", a.seat_label.strip())
             if m:
                 return (m.group(1).upper(), int(m.group(2)))

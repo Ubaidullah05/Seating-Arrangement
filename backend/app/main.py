@@ -4,10 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from sqlalchemy import inspect, text
 
 from backend.app.config import CORS_ORIGINS
-from backend.app.database import engine, Base
-from backend.app.routers import students, classrooms, exams, allocations, export
+from backend.app.database import engine, Base, SessionLocal
+from backend.app.routers import students, classrooms, exams, allocations, export, auth
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("exam_seating_planner")
@@ -18,6 +19,27 @@ try:
     logger.info("Database tables initialized successfully.")
 except Exception as e:
     logger.warning(f"Database table auto-initialization note: {e}")
+
+# Self-heal: add students.dob to pre-auth databases created before this feature
+try:
+    _inspector = inspect(engine)
+    _student_cols = [c["name"] for c in _inspector.get_columns("students")]
+    if "dob" not in _student_cols:
+        with engine.begin() as _conn:
+            _conn.execute(text("ALTER TABLE students ADD COLUMN dob VARCHAR(10)"))
+        logger.info("Added missing students.dob column.")
+except Exception as e:
+    logger.warning(f"Schema self-heal note: {e}")
+
+# Bootstrap the default ACOE faculty account (acoe@jerusalemengg.ac.in / acoe@123)
+try:
+    _bootstrap_db = SessionLocal()
+    try:
+        auth.bootstrap_faculty_user(_bootstrap_db)
+    finally:
+        _bootstrap_db.close()
+except Exception as e:
+    logger.warning(f"Faculty bootstrap note: {e}")
 
 app = FastAPI(
     title="Exam Seating Planner API",
@@ -83,6 +105,7 @@ app.include_router(classrooms.router)
 app.include_router(exams.router)
 app.include_router(allocations.router)
 app.include_router(export.router)
+app.include_router(auth.router)
 
 @app.get("/")
 def root():

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { DocumentCard } from "../components/DocumentCard";
@@ -37,31 +37,22 @@ export const SeatingPlansPage: React.FC = () => {
     queryFn: api.getFloors,
   });
 
-  // Set default selections once loaded
-  useEffect(() => {
-    if (exams && exams.length > 0 && !selectedExamId) {
-      setSelectedExamId(exams[0].id);
-    }
-  }, [exams, selectedExamId]);
+  // Derive selections during render (no setState-in-effect)
+  const currentExam = exams?.find(e => e.id === selectedExamId) || exams?.[0] || null;
+  const currentFloor = floors?.find(f => f.id === selectedFloorId) || floors?.[0] || null;
+  const currentClassroom =
+    currentFloor?.classrooms.find(c => c.id === selectedClassroomId) ||
+    currentFloor?.classrooms[0] ||
+    null;
 
-  useEffect(() => {
-    if (floors && floors.length > 0) {
-      if (!selectedFloorId) setSelectedFloorId(floors[0].id);
-      const targetFloor = floors.find(f => selectedFloorId ? f.id === selectedFloorId : true) || floors[0];
-      if (targetFloor.classrooms.length > 0 && !selectedClassroomId) {
-        setSelectedClassroomId(targetFloor.classrooms[0].id);
-      }
-    }
-  }, [floors, selectedFloorId, selectedClassroomId]);
-
-  const currentFloor = floors?.find(f => f.id === selectedFloorId) || floors?.[0];
-  const currentExam = exams?.find(e => e.id === selectedExamId) || exams?.[0];
+  const effectiveExamId = currentExam?.id ?? null;
+  const effectiveClassroomId = currentClassroom?.id ?? null;
 
   // Fetch Room Plan
   const { data: roomPlan, isLoading: isPlanLoading, isError: isPlanError, error: planError } = useQuery({
-    queryKey: ["room-plan", selectedExamId, selectedClassroomId],
-    queryFn: () => (selectedExamId && selectedClassroomId) ? api.getRoomPlan(selectedExamId, selectedClassroomId) : null,
-    enabled: !!(selectedExamId && selectedClassroomId),
+    queryKey: ["room-plan", effectiveExamId, effectiveClassroomId],
+    queryFn: () => (effectiveExamId && effectiveClassroomId) ? api.getRoomPlan(effectiveExamId, effectiveClassroomId) : null,
+    enabled: !!(effectiveExamId && effectiveClassroomId),
   });
 
   const handlePrint = () => {
@@ -69,14 +60,14 @@ export const SeatingPlansPage: React.FC = () => {
   };
 
   const handleDownload = async (type: "pdf" | "xlsx") => {
-    if (!selectedExamId) return;
+    if (!effectiveExamId) return;
     setDownloading(type);
     setDownloadError(null);
     try {
       if (type === "pdf") {
-        await api.downloadExportPdf(selectedExamId);
+        await api.downloadExportPdf(effectiveExamId);
       } else if (type === "xlsx") {
-        await api.downloadExportXlsx(selectedExamId);
+        await api.downloadExportXlsx(effectiveExamId);
       }
     } catch (err: any) {
       console.error("Export error:", err);
@@ -101,7 +92,7 @@ export const SeatingPlansPage: React.FC = () => {
 
         {/* Action Controls */}
         <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }} className="no-print">
-          {selectedExamId && (
+          {effectiveExamId && (
             <>
               <button
                 type="button"
@@ -229,7 +220,7 @@ export const SeatingPlansPage: React.FC = () => {
               EXAMINATION
             </label>
             <select
-              value={selectedExamId || ""}
+              value={effectiveExamId || ""}
               onChange={(e) => setSelectedExamId(Number(e.target.value))}
               style={{
                 padding: "8px 12px",
@@ -255,7 +246,7 @@ export const SeatingPlansPage: React.FC = () => {
               FLOOR LEVEL
             </label>
             <select
-              value={selectedFloorId || ""}
+              value={selectedFloorId || currentFloor?.id || ""}
               onChange={(e) => {
                 const fid = Number(e.target.value);
                 setSelectedFloorId(fid);
@@ -285,7 +276,7 @@ export const SeatingPlansPage: React.FC = () => {
               EXAM HALL / ROOM
             </label>
             <select
-              value={selectedClassroomId || ""}
+              value={effectiveClassroomId || ""}
               onChange={(e) => setSelectedClassroomId(Number(e.target.value))}
               style={{
                 padding: "8px 12px",

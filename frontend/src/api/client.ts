@@ -1,14 +1,41 @@
 import type {
   DashboardStats, Floor, Classroom, Exam, RoomSeatingPlan,
   NoticeBoardResponse, StudentSearchResult, UploadPreviewResponse,
-  StudentCreate
+  StudentCreate, LoginResponse, StudentSeat
 } from "../types";
 
 const API_BASE = "http://127.0.0.1:8000/api/v1";
+const AUTH_STORAGE_KEY = "jce_auth";
+
+function getStoredToken(): string | null {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.token ?? null;
+  } catch {
+    return null;
+  }
+}
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${endpoint}`, options);
+  const headers = new Headers(options?.headers);
+  const token = getStoredToken();
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
   if (!res.ok) {
+    const isLoginAttempt =
+      endpoint.startsWith("/auth/student/login") || endpoint.startsWith("/auth/faculty/login");
+    if (res.status === 401 && !isLoginAttempt) {
+      // Session expired — drop it and send the user back to the login page
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      if (window.location.pathname !== "/login") {
+        window.location.assign("/login");
+      }
+    }
     let errMessage = "Network request failed";
     try {
       const errData = await res.json();
@@ -22,6 +49,30 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  // Authentication
+  loginStudent: (register_no: string, password: string): Promise<LoginResponse> =>
+    request<LoginResponse>("/auth/student/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ register_no, password }),
+    }),
+
+  loginFaculty: (email: string, password: string): Promise<LoginResponse> =>
+    request<LoginResponse>("/auth/faculty/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    }),
+
+  changePassword: (old_password: string, new_password: string): Promise<{ message: string }> =>
+    request("/auth/faculty/change-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ old_password, new_password }),
+    }),
+
+  getMySeats: (): Promise<StudentSeat[]> => request<StudentSeat[]>("/auth/student/seats"),
+
   // Dashboard
   getDashboardStats: (): Promise<DashboardStats> => 
     request<DashboardStats>("/allocations/dashboard-stats"),

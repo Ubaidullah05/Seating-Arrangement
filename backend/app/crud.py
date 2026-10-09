@@ -94,28 +94,38 @@ def search_student(db: Session, query: str, exam_id: Optional[int] = None) -> Li
     return results
 
 def bulk_import_students(db: Session, students_data: List[StudentCreate]) -> int:
-    # Filter out existing register numbers
-    existing_reg_nos = set(
-        r[0] for r in db.query(Student.register_no).all()
-    )
+    # Existing students: register_no -> dob (may be None)
+    existing = {
+        r[0]: r[1]
+        for r in db.query(Student.register_no, Student.dob).all()
+    }
     new_objs = []
+    updated = 0
     for s in students_data:
-        if s.register_no not in existing_reg_nos:
+        if s.register_no not in existing:
             new_objs.append(
                 Student(
                     register_no=s.register_no,
                     name=s.name,
                     branch=s.branch,
                     semester=s.semester,
-                    subject_code=s.subject_code
+                    subject_code=s.subject_code,
+                    dob=s.dob
                 )
             )
-            existing_reg_nos.add(s.register_no)
-    
+            existing[s.register_no] = s.dob
+        elif s.dob and not existing[s.register_no]:
+            # Fill a missing DOB on an existing record so the student can sign in
+            student = db.query(Student).filter(Student.register_no == s.register_no).first()
+            if student is not None:
+                student.dob = s.dob
+                updated += 1
+
     if new_objs:
         db.add_all(new_objs)
+    if new_objs or updated:
         db.commit()
-    return len(new_objs)
+    return len(new_objs) + updated
 
 def clear_all_students(db: Session) -> int:
     count = db.query(Student).delete()

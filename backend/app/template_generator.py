@@ -2,7 +2,6 @@ import io
 from pathlib import Path
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
 from openpyxl.comments import Comment
 
 def build_template_workbook() -> openpyxl.Workbook:
@@ -39,7 +38,8 @@ def build_template_workbook() -> openpyxl.Workbook:
         "Student Name",
         "Branch",
         "Semester",
-        "Course Code"
+        "Course Code",
+        "Date of Birth"
     ]
 
     ws.row_dimensions[1].height = 28
@@ -59,18 +59,27 @@ def build_template_workbook() -> openpyxl.Workbook:
     reg_comment.height = 70
     ws.cell(row=1, column=1).comment = reg_comment
 
+    # Add explanatory comment on Date of Birth header
+    dob_comment = Comment(
+        "REQUIRED FOR PORTAL LOGIN: Strict DD/MM/YYYY format only (e.g. 15/08/2005).\nStudents sign in to the portal with this date of birth.",
+        "COE Exam Office"
+    )
+    dob_comment.width = 250
+    dob_comment.height = 70
+    ws.cell(row=1, column=6).comment = dob_comment
+
     # 10 Sample candidate rows with valid 16-digit register numbers
     sample_rows = [
-        ("2403310910421001", "Aarav Rajan", "B.E. Computer Science and Engineering", 5, "JCS2501"),
-        ("2403310910421002", "Diya Rajan", "B.Tech. Artificial Intelligence and Data Science", 5, "JAI2502"),
-        ("2403310910421003", "Karthik Rajan", "B.E. Electronics and Communication Engineering", 5, "JEC2501"),
-        ("2403310910421004", "Ananya Rajan", "B.Tech. Information Technology", 5, "JIT2501"),
-        ("2403310910421005", "Rahul Rajan", "B.E. Mechanical Engineering", 5, "JME2501"),
-        ("2403310910421006", "Sneha Kumar", "B.E. Computer Science and Engineering", 5, "JCS2501"),
-        ("2403310910421007", "Vikram Kumar", "B.Tech. Artificial Intelligence and Data Science", 5, "JAI2502"),
-        ("2403310910421008", "Priya Kumar", "B.E. Electronics and Communication Engineering", 5, "JEC2501"),
-        ("2403310910421009", "Siddharth Kumar", "B.Tech. Information Technology", 5, "JIT2501"),
-        ("2403310910421010", "Meera Kumar", "B.E. Civil Engineering", 5, "JCE2501"),
+        ("2403310910421001", "Aarav Rajan", "B.E. Computer Science and Engineering", 5, "JCS2501", "15/08/2005"),
+        ("2403310910421002", "Diya Rajan", "B.Tech. Artificial Intelligence and Data Science", 5, "JAI2502", "02/11/2005"),
+        ("2403310910421003", "Karthik Rajan", "B.E. Electronics and Communication Engineering", 5, "JEC2501", "27/01/2005"),
+        ("2403310910421004", "Ananya Rajan", "B.Tech. Information Technology", 5, "JIT2501", "09/03/2005"),
+        ("2403310910421005", "Rahul Rajan", "B.E. Mechanical Engineering", 5, "JME2501", "21/07/2005"),
+        ("2403310910421006", "Sneha Kumar", "B.E. Computer Science and Engineering", 5, "JCS2501", "30/12/2004"),
+        ("2403310910421007", "Vikram Kumar", "B.Tech. Artificial Intelligence and Data Science", 5, "JAI2502", "14/06/2005"),
+        ("2403310910421008", "Priya Kumar", "B.E. Electronics and Communication Engineering", 5, "JEC2501", "05/09/2005"),
+        ("2403310910421009", "Siddharth Kumar", "B.Tech. Information Technology", 5, "JIT2501", "18/02/2005"),
+        ("2403310910421010", "Meera Kumar", "B.E. Civil Engineering", 5, "JCE2501", "23/10/2004"),
     ]
 
     for row_idx, row_values in enumerate(sample_rows, 2):
@@ -100,6 +109,12 @@ def build_template_workbook() -> openpyxl.Workbook:
                 cell.value = int(val) if val is not None else ""
                 cell.font = data_font
                 cell.alignment = Alignment(horizontal="center", vertical="center")
+            elif col_idx == 6:
+                # Date of Birth (DD/MM/YYYY): Center aligned, text format
+                cell.value = str(val)
+                cell.number_format = "@"
+                cell.font = mono_font
+                cell.alignment = Alignment(horizontal="center", vertical="center")
             else:
                 # Course Code: Center aligned monospace/bold
                 cell.value = str(val)
@@ -117,7 +132,8 @@ def build_template_workbook() -> openpyxl.Workbook:
         "B": 24,  # Student Name
         "C": 45,  # Branch
         "D": 14,  # Semester
-        "E": 18   # Course Code
+        "E": 18,  # Course Code
+        "F": 18   # Date of Birth
     }
     for col_letter, width in col_widths.items():
         ws.column_dimensions[col_letter].width = width
@@ -190,6 +206,13 @@ def build_template_workbook() -> openpyxl.Workbook:
             "subject, subject code, subject_code, course code, course_code",
             "Text",
             "Examination subject / course code (e.g. JCS2501)."
+        ),
+        (
+            "Date of Birth",
+            "REQUIRED for portal login",
+            "date of birth, dob, birth date, date_of_birth, birthdate",
+            "Text — DD/MM/YYYY",
+            "Student login password for the portal (e.g. 15/08/2005). Strict DD/MM/YYYY only — no other formats are accepted."
         )
     ]
 

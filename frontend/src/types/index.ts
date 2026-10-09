@@ -13,6 +13,7 @@ export interface StudentCreate {
   branch?: string | null;
   semester?: number | null;
   subject_code?: string | null;
+  dob?: string | null; // DD/MM/YYYY — student portal password
 }
 
 export interface InvalidRow {
@@ -134,4 +135,44 @@ export interface DashboardStats {
   active_exam_name?: string | null;
   active_exam_date?: string | null;
   active_exam_session?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Authentication
+// ---------------------------------------------------------------------------
+export interface LoginStudentPayload {
+  register_no: string;
+  password: string; // DOB in DD/MM/YYYY
+}
+
+export interface LoginFacultyPayload {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  role: "student" | "faculty";
+  must_change_password: boolean;
+  student?: Student | null;
+  email?: string | null;
+}
+
+export interface AuthUser {
+  role: "student" | "faculty";
+  token: string;
+  email?: string | null;
+  mustChangePassword?: boolean;
+  student?: Student | null;
+}
+
+export interface StudentSeat {
+  exam_id: number;
+  exam_name: string;
+  exam_date: string;
+  session: string;
+  floor_name: string;
+  classroom_name: string;
+  seat_label: string;
 }

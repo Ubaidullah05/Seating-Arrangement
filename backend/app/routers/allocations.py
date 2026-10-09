@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict
+from typing import List, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from backend.app.database import get_db
@@ -9,7 +9,7 @@ from backend.app.schemas import (
 )
 from backend.app import crud
 from backend.app.allocation import run_seating_allocation
-from backend.app.models import Classroom, Exam, Allocation
+from backend.app.models import Allocation
 
 router = APIRouter(prefix="/api/v1/allocations", tags=["allocations"])
 

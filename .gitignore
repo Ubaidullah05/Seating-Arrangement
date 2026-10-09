@@ -1,0 +1,26 @@
+# Environment
+.env
+.freebuff/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+backend/venv/
+.pytest_cache/
+*.pytest_cache/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Database (local dev artifact)
+backend/exam_seating.db
+*.db-journal
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

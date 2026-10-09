@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from backend.app.main import app
 from backend.app.template_generator import build_template_workbook, generate_candidate_template_xlsx
 from backend.app.routers.students import find_column, REGISTER_NO_SYNONYMS, NAME_SYNONYMS, BRANCH_SYNONYMS
+from conftest import test_session as _test_db
 
 client = TestClient(app)
 

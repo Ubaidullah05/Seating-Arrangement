@@ -1,10 +1,9 @@
 import io
 import re
-from pathlib import Path
 from typing import List, Optional
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
@@ -26,6 +25,7 @@ NAME_SYNONYMS = ["name", "student name", "student_name", "candidate name"]
 BRANCH_SYNONYMS = ["branch", "dept", "department", "course", "program"]
 SEM_SYNONYMS = ["sem", "semester", "current semester"]
 SUBJECT_SYNONYMS = ["subject", "subject code", "subject_code", "course code", "course_code"]
+DOB_SYNONYMS = ["date of birth", "dob", "birth date", "date_of_birth", "birthdate"]
 
 def normalize_header(name: str) -> str:
     s = str(name).strip().lower()
@@ -60,23 +60,9 @@ def find_column(df_columns, synonyms):
 @router.get("/template")
 async def download_template():
     """
-    Downloads pre-formatted XLSX candidate register template with 16-digit text format cells
-    and all required/optional columns.
+    Generates and downloads a pre-formatted XLSX candidate register template
+    with 16-digit text format cells and all required/optional columns.
     """
-    base_dir = Path(__file__).resolve().parent.parent.parent
-    template_path = base_dir / "samples" / "candidate_register_template.xlsx"
-    if not template_path.exists():
-        template_path = base_dir / "frontend" / "public" / "candidate_register_template.xlsx"
-    
-    if template_path.exists():
-        return FileResponse(
-            path=str(template_path),
-            filename="candidate_register_template.xlsx",
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": 'attachment; filename="candidate_register_template.xlsx"'}
-        )
-
-    # Dynamic generation fallback
     buf = generate_candidate_template_xlsx()
     return StreamingResponse(
         buf,
@@ -143,11 +129,13 @@ async def upload_preview(
     branch_col = find_column(df.columns, BRANCH_SYNONYMS)
     sem_col = find_column(df.columns, SEM_SYNONYMS)
     sub_col = find_column(df.columns, SUBJECT_SYNONYMS)
+    dob_col = find_column(df.columns, DOB_SYNONYMS)
 
-    # Fetch existing register numbers in DB
-    existing_in_db = set(
-        r[0] for r in db.query(crud.Student.register_no).all()
-    )
+    # Fetch existing register numbers and DOBs in DB
+    existing_in_db = {
+        r[0]: r[1]
+        for r in db.query(crud.Student.register_no, crud.Student.dob).all()
+    }
 
     seen_in_file = set()
     invalid_rows: List[InvalidRow] = []
@@ -198,16 +186,48 @@ async def upload_preview(
             )
             continue
 
-        # 4. Duplicate check against database
-        if cleaned_val in existing_in_db:
-            duplicate_rows.append(
-                DuplicateRow(
-                    row_number=row_num,
-                    register_no=cleaned_val,
-                    reason="Register number already exists in the database."
+        # 4. Date of birth validation — strict DD/MM/YYYY only
+        dob_raw = str(row[dob_col]).strip() if dob_col and dob_col in row and row[dob_col] else ""
+        dob_val: Optional[str] = None
+        if dob_raw and dob_raw.lower() != "nan":
+            from datetime import datetime
+            if not re.match(r"^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/\d{4}$", dob_raw):
+                invalid_rows.append(
+                    InvalidRow(
+                        row_number=row_num,
+                        raw_value=dob_raw,
+                        reason="Date of birth must be in DD/MM/YYYY format (e.g. 15/08/2005). No other formats are accepted.",
+                    )
                 )
-            )
-            continue
+                continue
+            try:
+                datetime.strptime(dob_raw, "%d/%m/%Y")
+            except ValueError:
+                invalid_rows.append(
+                    InvalidRow(
+                        row_number=row_num,
+                        raw_value=dob_raw,
+                        reason=f"Date of birth is not a valid calendar date: '{dob_raw}'.",
+                    )
+                )
+                continue
+            dob_val = dob_raw
+
+        # 5. Duplicate check against database.
+        #    Allowed through when the DB record has no DOB yet and this file
+        #    supplies one — the commit will fill the missing DOB so the
+        #    student can sign in to the portal.
+        if cleaned_val in existing_in_db:
+            db_dob = existing_in_db[cleaned_val]
+            if not (dob_val and not db_dob):
+                duplicate_rows.append(
+                    DuplicateRow(
+                        row_number=row_num,
+                        register_no=cleaned_val,
+                        reason="Register number already exists in the database."
+                    )
+                )
+                continue
 
         seen_in_file.add(cleaned_val)
 
@@ -223,7 +243,8 @@ async def upload_preview(
                 name=name_val,
                 branch=branch_val,
                 semester=sem_val,
-                subject_code=sub_val
+                subject_code=sub_val,
+                dob=dob_val
             )
         )
 

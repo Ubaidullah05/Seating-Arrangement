@@ -1,8 +1,17 @@
 import React from "react";
 import logoPng from "../assets/logo.png";
-import { UserCheck } from "lucide-react";
+import { KeyRound, LogOut, Menu } from "lucide-react";
+import { useAuth } from "../authContext";
 
-export const TopHeader: React.FC = () => {
+interface TopHeaderProps {
+  onMenuClick?: () => void;
+  onChangePassword?: () => void;
+}
+
+export const TopHeader: React.FC<TopHeaderProps> = ({ onMenuClick, onChangePassword }) => {
+  const { user, logout } = useAuth();
+  const facultyEmail = user?.email || "acoe@jerusalemengg.ac.in";
+
   return (
     <header
       className="portal-header-bar"
@@ -21,7 +30,29 @@ export const TopHeader: React.FC = () => {
       }}
     >
       {/* College Identity */}
-      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "16px", minWidth: 0 }}>
+        {/* Mobile hamburger */}
+        <button
+          type="button"
+          className="mobile-menu-btn"
+          onClick={onMenuClick}
+          aria-label="Open navigation menu"
+          style={{
+            background: "rgba(255,255,255,0.12)",
+            border: "1px solid rgba(255,255,255,0.25)",
+            color: "#ffffff",
+            borderRadius: "6px",
+            padding: "8px",
+            display: "none",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
+        >
+          <Menu size={20} />
+        </button>
+
         {/* White square logo container */}
         <div
           style={{
@@ -37,16 +68,17 @@ export const TopHeader: React.FC = () => {
             flexShrink: 0,
           }}
         >
-          <img 
-            src={logoPng} 
-            alt="Jerusalem College of Engineering Logo" 
+          <img
+            src={logoPng}
+            alt="Jerusalem College of Engineering Logo"
             style={{ width: "100%", height: "100%", objectFit: "contain" }}
           />
         </div>
 
         {/* Text Headers */}
-        <div style={{ display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
           <h1
+            className="portal-header-title"
             style={{
               fontFamily: "'Georgia', 'Times New Roman', serif",
               fontSize: "16px",
@@ -56,11 +88,15 @@ export const TopHeader: React.FC = () => {
               lineHeight: "1.25",
               margin: 0,
               textTransform: "uppercase",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
             Jerusalem College of Engineering, Chennai - 600100
           </h1>
           <div
+            className="portal-header-subtitle"
             style={{
               fontFamily: "'Georgia', 'Times New Roman', serif",
               fontStyle: "italic",
@@ -73,6 +109,7 @@ export const TopHeader: React.FC = () => {
             (An Autonomous Institution Affiliated to Anna University, Chennai)
           </div>
           <div
+            className="portal-header-office"
             style={{
               fontFamily: "'Inter', sans-serif",
               fontSize: "10.5px",
@@ -88,53 +125,81 @@ export const TopHeader: React.FC = () => {
         </div>
       </div>
 
-      {/* Staff Label - No auth / static as per requirements */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          backgroundColor: "rgba(255, 255, 255, 0.12)",
-          padding: "6px 14px",
-          borderRadius: "20px",
-          border: "1px solid rgba(255, 255, 255, 0.2)",
-        }}
-      >
-        <div
-          style={{
-            width: "30px",
-            height: "30px",
-            borderRadius: "50%",
-            backgroundColor: "#ffffff",
-            color: "#003d8f",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+      {/* Signed-in faculty actions */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+        {user?.mustChangePassword && (
+          <button
+            type="button"
+            onClick={onChangePassword}
+            className="header-action-btn header-action-alert"
+            title="Set a new password"
+          >
+            <KeyRound size={16} />
+            <span className="header-action-label">Set Password</span>
+          </button>
+        )}
+
+        <div className="header-user-chip" title={facultyEmail}>
+          <div
+            style={{
+              width: "30px",
+              height: "30px",
+              borderRadius: "50%",
+              backgroundColor: "#ffffff",
+              color: "#003d8f",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 800,
+              fontSize: "13px",
+              flexShrink: 0,
+            }}
+          >
+            A
+          </div>
+          <div className="header-user-text" style={{ display: "flex", flexDirection: "column" }}>
+            <span
+              style={{
+                fontWeight: 800,
+                fontSize: "12px",
+                letterSpacing: "0.8px",
+                color: "#ffffff",
+              }}
+            >
+              ACOE
+            </span>
+            <span
+              className="header-user-email"
+              style={{
+                fontSize: "10px",
+                color: "#cbd5e1",
+                letterSpacing: "0.3px",
+              }}
+            >
+              {facultyEmail}
+            </span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onChangePassword}
+          className="header-icon-btn"
+          title="Change password"
+          aria-label="Change password"
         >
-          <UserCheck size={18} />
-        </div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <span 
-            style={{ 
-              fontWeight: 800, 
-              fontSize: "12px", 
-              letterSpacing: "0.8px",
-              color: "#ffffff" 
-            }}
-          >
-            STAFF PORTAL
-          </span>
-          <span 
-            style={{ 
-              fontSize: "10px", 
-              color: "#cbd5e1",
-              letterSpacing: "0.3px"
-            }}
-          >
-            Exam Coordinator
-          </span>
-        </div>
+          <KeyRound size={17} />
+        </button>
+
+        <button
+          type="button"
+          onClick={logout}
+          className="header-icon-btn"
+          title="Sign out"
+          aria-label="Sign out"
+        >
+          <LogOut size={17} />
+        </button>
       </div>
     </header>
   );

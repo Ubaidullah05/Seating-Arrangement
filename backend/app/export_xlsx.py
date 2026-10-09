@@ -1,7 +1,6 @@
 import io
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
 from typing import List
 from backend.app.models import Allocation, Exam
 

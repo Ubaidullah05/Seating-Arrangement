@@ -8,6 +8,10 @@ class StudentBase(BaseModel):
     branch: Optional[str] = None
     semester: Optional[int] = None
     subject_code: Optional[str] = None
+    dob: Optional[str] = Field(
+        None,
+        description="Date of birth in strict DD/MM/YYYY format (used as login password)",
+    )
 
     @field_validator("register_no")
     @classmethod
@@ -17,11 +21,32 @@ class StudentBase(BaseModel):
             raise ValueError(f"Register number must be exactly 16 numeric digits, received: '{s}'")
         return s
 
+    @field_validator("dob")
+    @classmethod
+    def validate_dob(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        s = str(v).strip()
+        if not s:
+            return None
+        from datetime import datetime
+        if not re.match(r"^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/\d{4}$", s):
+            raise ValueError(
+                f"Date of birth must be in DD/MM/YYYY format, received: '{s}'"
+            )
+        try:
+            datetime.strptime(s, "%d/%m/%Y")
+        except ValueError:
+            raise ValueError(f"Date of birth is not a valid calendar date: '{s}'")
+        return s
+
 class StudentCreate(StudentBase):
     pass
 
 class StudentResponse(StudentBase):
     id: int
+    # DOB is the student's portal password — never serialize it in API responses
+    dob: Optional[str] = Field(None, exclude=True)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -183,3 +208,40 @@ class DashboardStats(BaseModel):
     active_exam_name: Optional[str] = None
     active_exam_date: Optional[str] = None
     active_exam_session: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Authentication schemas
+# ---------------------------------------------------------------------------
+class StudentLoginRequest(BaseModel):
+    register_no: str = Field(..., description="16-digit register number")
+    password: str = Field(..., description="Date of birth in DD/MM/YYYY format")
+
+
+class FacultyLoginRequest(BaseModel):
+    email: str = Field(..., description="Institutional email ending @jerusalemengg.ac.in")
+    password: str = Field(..., description="Faculty password (default: acoe@123)")
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=6, max_length=128)
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    role: str  # "student" | "faculty"
+    must_change_password: bool = False
+    student: Optional[StudentResponse] = None
+    email: Optional[str] = None
+
+
+class StudentSeatResponse(BaseModel):
+    exam_id: int
+    exam_name: str
+    exam_date: str
+    session: str
+    floor_name: str
+    classroom_name: str
+    seat_label: str

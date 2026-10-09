@@ -14,9 +14,11 @@ import {
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  mobileOpen?: boolean;
+  onNavigate?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, mobileOpen = false, onNavigate }) => {
   const navItems = [
     { name: "DASHBOARD", path: "/", icon: LayoutDashboard },
     { name: "UPLOAD STUDENTS", path: "/upload", icon: UploadCloud },
@@ -28,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
 
   return (
     <aside 
-      className="portal-sidebar"
+      className={`portal-sidebar${mobileOpen ? " mobile-open" : ""}`}
       style={{
         width: collapsed ? "72px" : "290px",
         minHeight: "100vh",
@@ -98,6 +100,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
               key={item.path}
               to={item.path}
               title={collapsed ? item.name : undefined}
+              onClick={onNavigate}
               style={({ isActive }) => ({
                 display: "flex",
                 alignItems: "center",
