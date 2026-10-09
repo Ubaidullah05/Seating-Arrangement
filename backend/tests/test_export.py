@@ -38,11 +38,11 @@ def client_with_db():
     db.commit()
 
     # Generate allocations
-    req = GenerateAllocationRequest(name="Midterm Exam", exam_date="2026-10-15", session="FN", seed=42)
+    req = GenerateAllocationRequest(name="Midterm Exam", exam_date="15-10-2026", session="FN", seed=42)
     exam, _ = run_seating_allocation(db, req)
 
     # Empty exam without allocations
-    empty_exam = Exam(name="Empty Exam", exam_date="2026-10-16", session="AN")
+    empty_exam = Exam(name="Empty Exam", exam_date="16-10-2026", session="AN")
     db.add(empty_exam)
     db.commit()
 

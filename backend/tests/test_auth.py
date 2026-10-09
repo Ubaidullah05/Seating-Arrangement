@@ -167,7 +167,7 @@ def test_student_seats_shows_only_my_hall():
     room = Classroom(floor_id=floor.id, name="TEST101", columns=4, rows_per_column=7)
     _test_db.add(room)
     _test_db.commit()
-    exam = Exam(name="UNIT TEST EXAM", exam_date="2026-10-15", session="FN")
+    exam = Exam(name="UNIT TEST EXAM", exam_date="15-10-2026", session="FN")
     _test_db.add(exam)
     _test_db.commit()
     _test_db.add(

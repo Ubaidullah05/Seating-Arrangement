@@ -8,7 +8,7 @@ def build_template_workbook() -> openpyxl.Workbook:
     """
     Constructs a professionally styled Excel workbook template for candidate registration.
     Includes:
-      - Sheet 1: 'Candidate Register' with pre-formatted Text cells for 16-digit numbers.
+      - Sheet 1: 'Candidate Register' with S.no reference column + pre-formatted Text cells for 13/16-digit numbers.
       - Sheet 2: 'Template Guidelines' with required/optional column rules and accepted headers.
     """
     wb = openpyxl.Workbook()
@@ -34,6 +34,7 @@ def build_template_workbook() -> openpyxl.Workbook:
     zebra_fill = PatternFill(start_color="F8FAFC", end_color="F8FAFC", fill_type="solid")
 
     headers = [
+        "S.no",
         "Register Number",
         "Student Name",
         "Branch",
@@ -50,14 +51,23 @@ def build_template_workbook() -> openpyxl.Workbook:
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
         cell.border = thin_border
 
+    # Add explanatory comment on S.no header
+    sno_comment = Comment(
+        "Serial number for your own reference (1, 2, 3 …).\nIgnored during upload — safe to keep or delete.",
+        "COE Exam Office"
+    )
+    sno_comment.width = 240
+    sno_comment.height = 60
+    ws.cell(row=1, column=1).comment = sno_comment
+
     # Add explanatory comment on Register Number header
     reg_comment = Comment(
-        "REQUIRED: Exactly 16 numeric digits.\nColumn cells MUST be formatted as Text (@) to prevent Excel precision loss.",
+        "REQUIRED: Exactly 13 or 16 numeric digits.\nColumn cells MUST be formatted as Text (@) to prevent Excel precision loss.",
         "COE Exam Office"
     )
     reg_comment.width = 250
     reg_comment.height = 70
-    ws.cell(row=1, column=1).comment = reg_comment
+    ws.cell(row=1, column=2).comment = reg_comment
 
     # Add explanatory comment on Date of Birth header
     dob_comment = Comment(
@@ -66,20 +76,20 @@ def build_template_workbook() -> openpyxl.Workbook:
     )
     dob_comment.width = 250
     dob_comment.height = 70
-    ws.cell(row=1, column=6).comment = dob_comment
+    ws.cell(row=1, column=7).comment = dob_comment
 
     # 10 Sample candidate rows with valid 16-digit register numbers
     sample_rows = [
-        ("2403310910421001", "Aarav Rajan", "B.E. Computer Science and Engineering", 5, "JCS2501", "15/08/2005"),
-        ("2403310910421002", "Diya Rajan", "B.Tech. Artificial Intelligence and Data Science", 5, "JAI2502", "02/11/2005"),
-        ("2403310910421003", "Karthik Rajan", "B.E. Electronics and Communication Engineering", 5, "JEC2501", "27/01/2005"),
-        ("2403310910421004", "Ananya Rajan", "B.Tech. Information Technology", 5, "JIT2501", "09/03/2005"),
-        ("2403310910421005", "Rahul Rajan", "B.E. Mechanical Engineering", 5, "JME2501", "21/07/2005"),
-        ("2403310910421006", "Sneha Kumar", "B.E. Computer Science and Engineering", 5, "JCS2501", "30/12/2004"),
-        ("2403310910421007", "Vikram Kumar", "B.Tech. Artificial Intelligence and Data Science", 5, "JAI2502", "14/06/2005"),
-        ("2403310910421008", "Priya Kumar", "B.E. Electronics and Communication Engineering", 5, "JEC2501", "05/09/2005"),
-        ("2403310910421009", "Siddharth Kumar", "B.Tech. Information Technology", 5, "JIT2501", "18/02/2005"),
-        ("2403310910421010", "Meera Kumar", "B.E. Civil Engineering", 5, "JCE2501", "23/10/2004"),
+        (1, "2403310910421001", "Aarav Rajan", "B.E. Computer Science and Engineering", 5, "JCS2501", "15/08/2005"),
+        (2, "2403310910421002", "Diya Rajan", "B.Tech. Artificial Intelligence and Data Science", 5, "JAI2502", "02/11/2005"),
+        (3, "2403310910421003", "Karthik Rajan", "B.E. Electronics and Communication Engineering", 5, "JEC2501", "27/01/2005"),
+        (4, "2403310910421004", "Ananya Rajan", "B.Tech. Information Technology", 5, "JIT2501", "09/03/2005"),
+        (5, "2403310910421005", "Rahul Rajan", "B.E. Mechanical Engineering", 5, "JME2501", "21/07/2005"),
+        (6, "2403310910421006", "Sneha Kumar", "B.E. Computer Science and Engineering", 5, "JCS2501", "30/12/2004"),
+        (7, "2403310910421007", "Vikram Kumar", "B.Tech. Artificial Intelligence and Data Science", 5, "JAI2502", "14/06/2005"),
+        (8, "2403310910421008", "Priya Kumar", "B.E. Electronics and Communication Engineering", 5, "JEC2501", "05/09/2005"),
+        (9, "2403310910421009", "Siddharth Kumar", "B.Tech. Information Technology", 5, "JIT2501", "18/02/2005"),
+        (10, "2403310910421010", "Meera Kumar", "B.E. Civil Engineering", 5, "JCE2501", "23/10/2004"),
     ]
 
     for row_idx, row_values in enumerate(sample_rows, 2):
@@ -94,22 +104,27 @@ def build_template_workbook() -> openpyxl.Workbook:
                 cell.fill = row_fill
 
             if col_idx == 1:
+                # S.no: Center aligned serial number
+                cell.value = int(val) if val is not None else ""
+                cell.font = data_font
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+            elif col_idx == 2:
                 # REGISTER NUMBER: Explicit text format '@' and string data type
                 cell.number_format = "@"
                 cell.value = str(val)
                 cell.font = mono_font
                 cell.alignment = Alignment(horizontal="center", vertical="center")
-            elif col_idx in (2, 3):
+            elif col_idx in (3, 4):
                 # Student Name & Branch: Left aligned
                 cell.value = str(val)
                 cell.font = data_font
                 cell.alignment = Alignment(horizontal="left", vertical="center")
-            elif col_idx == 4:
+            elif col_idx == 5:
                 # Semester: Center aligned number
                 cell.value = int(val) if val is not None else ""
                 cell.font = data_font
                 cell.alignment = Alignment(horizontal="center", vertical="center")
-            elif col_idx == 6:
+            elif col_idx == 7:
                 # Date of Birth (DD/MM/YYYY): Center aligned, text format
                 cell.value = str(val)
                 cell.number_format = "@"
@@ -121,19 +136,20 @@ def build_template_workbook() -> openpyxl.Workbook:
                 cell.font = mono_font
                 cell.alignment = Alignment(horizontal="center", vertical="center")
 
-    # Pre-format extra empty rows in Column A as Text (@) so user inputs stay text
+    # Pre-format extra empty rows in the Register Number column as Text (@) so user inputs stay text
     for extra_row in range(len(sample_rows) + 2, 250):
-        col_a_cell = ws.cell(row=extra_row, column=1)
-        col_a_cell.number_format = "@"
+        reg_cell = ws.cell(row=extra_row, column=2)
+        reg_cell.number_format = "@"
 
     # Set column widths
     col_widths = {
-        "A": 25,  # Register Number
-        "B": 24,  # Student Name
-        "C": 45,  # Branch
-        "D": 14,  # Semester
-        "E": 18,  # Course Code
-        "F": 18   # Date of Birth
+        "A": 8,   # S.no
+        "B": 25,  # Register Number
+        "C": 24,  # Student Name
+        "D": 45,  # Branch
+        "E": 14,  # Semester
+        "F": 18,  # Course Code
+        "G": 18   # Date of Birth
     }
     for col_letter, width in col_widths.items():
         ws.column_dimensions[col_letter].width = width
@@ -173,11 +189,18 @@ def build_template_workbook() -> openpyxl.Workbook:
     # Guidelines rows
     guide_rows = [
         (
+            "S.no",
+            "Optional — Ignored",
+            "s.no, sno, sl no, serial no, serial number, no",
+            "Integer (1, 2, 3 …)",
+            "Serial number for your own reference only. The importer skips this column entirely — keep it or delete it, the upload result is identical."
+        ),
+        (
             "Register Number",
             "REQUIRED (*)",
             "register number, reg no, reg_no, regno, registration number, register",
-            "Text (@) — 16 Digits",
-            "Exact 16-digit numeric string (e.g. 2403310910421001). MUST be formatted as Text in Excel to prevent 15-digit precision corruption or scientific notation (2.4033E+15)."
+            "Text (@) — 13 or 16 Digits",
+            "Exactly 13 or 16 numeric digits (e.g. 2403310910421001 or 2403310910421). MUST be formatted as Text in Excel to prevent 15-digit precision corruption or scientific notation (2.4033E+15)."
         ),
         (
             "Student Name",
@@ -254,8 +277,8 @@ def build_template_workbook() -> openpyxl.Workbook:
 
     advisory_notes = [
         "1. Excel 15-Digit IEEE-754 Limit: Microsoft Excel only supports 15 digits for numbers. A 16-digit number saved as General or Number will truncate the 16th digit to '0' or convert into scientific notation (e.g., 2.40331E+15).",
-        "2. How to ensure proper Text format in Excel: Select Column A -> Right click -> Format Cells -> choose 'Text' -> click OK before entering or pasting register numbers.",
-        "3. Alternative Quick Fix: Precede the 16 digits with a single apostrophe (e.g., '2403310910421001). The system automatically removes the leading apostrophe during import.",
+        "2. How to ensure proper Text format in Excel: Select Column B (Register Number) -> Right click -> Format Cells -> choose 'Text' -> click OK before entering or pasting register numbers.",
+        "3. Alternative Quick Fix: Precede the digits with a single apostrophe (e.g., '2403310910421001). The system automatically removes the leading apostrophe during import.",
         "4. Supported Upload Formats: Both Microsoft Excel (.xlsx, .xls) and Comma-Separated Values (.csv) are fully supported by the validation engine."
     ]
 
@@ -281,6 +304,87 @@ def generate_candidate_template_xlsx() -> io.BytesIO:
     Generates the template workbook and returns an in-memory BytesIO buffer.
     """
     wb = build_template_workbook()
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def build_dob_template_workbook() -> openpyxl.Workbook:
+    """
+    Lightweight 2-column template: Register Number + Date of Birth.
+    Used to assign/correct portal passwords (DOBs) for existing students.
+    """
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Register and DOB"
+    ws.views.sheetView[0].showGridLines = True
+
+    navy_header_fill = PatternFill(start_color="002F66", end_color="002F66", fill_type="solid")
+    header_font = Font(name="Segoe UI", size=11, bold=True, color="FFFFFF")
+    mono_font = Font(name="Consolas", size=10, bold=True, color="002F66")
+    thin_border = Border(
+        left=Side(style="thin", color="CBD5E1"),
+        right=Side(style="thin", color="CBD5E1"),
+        top=Side(style="thin", color="CBD5E1"),
+        bottom=Side(style="thin", color="CBD5E1"),
+    )
+
+    for col_idx, header_text in enumerate(["Register Number", "Date of Birth"], 1):
+        cell = ws.cell(row=1, column=col_idx, value=header_text)
+        cell.fill = navy_header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = thin_border
+    ws.row_dimensions[1].height = 28
+
+    reg_comment = Comment(
+        "REQUIRED: Exactly 13 or 16 numeric digits.\nFormat this column as Text (@) before typing or pasting.",
+        "COE Exam Office",
+    )
+    reg_comment.width = 250
+    reg_comment.height = 60
+    ws.cell(row=1, column=1).comment = reg_comment
+
+    dob_comment = Comment(
+        "REQUIRED: Strict DD/MM/YYYY only (e.g. 15/08/2005).\nThis is the student's portal login password.",
+        "COE Exam Office",
+    )
+    dob_comment.width = 250
+    dob_comment.height = 60
+    ws.cell(row=1, column=2).comment = dob_comment
+
+    # Sample rows reuse two existing students — re-importing them is a harmless no-op
+    sample_rows = [
+        ("2403310910421001", "15/08/2005"),
+        ("2403310910421002", "02/11/2005"),
+    ]
+    for row_idx, (reg, dob) in enumerate(sample_rows, 2):
+        ws.row_dimensions[row_idx].height = 20
+        reg_cell = ws.cell(row=row_idx, column=1, value=str(reg))
+        reg_cell.number_format = "@"
+        reg_cell.font = mono_font
+        reg_cell.alignment = Alignment(horizontal="center", vertical="center")
+        reg_cell.border = thin_border
+        dob_cell = ws.cell(row=row_idx, column=2, value=str(dob))
+        dob_cell.number_format = "@"
+        dob_cell.font = mono_font
+        dob_cell.alignment = Alignment(horizontal="center", vertical="center")
+        dob_cell.border = thin_border
+
+    # Keep empty rows in both columns as Text so user input is never corrupted
+    for extra_row in range(len(sample_rows) + 2, 500):
+        ws.cell(row=extra_row, column=1).number_format = "@"
+        ws.cell(row=extra_row, column=2).number_format = "@"
+
+    ws.column_dimensions["A"].width = 25
+    ws.column_dimensions["B"].width = 18
+    return wb
+
+
+def generate_dob_template_xlsx() -> io.BytesIO:
+    """Generates the 2-column DOB template and returns an in-memory buffer."""
+    wb = build_dob_template_workbook()
     buffer = io.BytesIO()
     wb.save(buffer)
     buffer.seek(0)

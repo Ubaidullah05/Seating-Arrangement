@@ -1,4 +1,5 @@
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from backend.app.database import Base
@@ -43,7 +44,7 @@ def test_allocation_even_distribution(test_db):
 
     req = GenerateAllocationRequest(
         name="TEST EXAM",
-        exam_date="2026-10-15",
+        exam_date="15-10-2026",
         session="FN",
         seed=42
     )
@@ -74,7 +75,7 @@ def test_allocation_no_duplicate_seats_or_students(test_db):
 
     req = GenerateAllocationRequest(
         name="DUP CHECK EXAM",
-        exam_date="2026-10-15",
+        exam_date="15-10-2026",
         session="AN",
         seed=123
     )
@@ -99,7 +100,7 @@ def test_allocation_capacity_exceeded_error(test_db):
     test_db.add_all(students)
     test_db.commit()
 
-    req = GenerateAllocationRequest(name="OVERFLOW EXAM", exam_date="2026-10-15", session="FN")
+    req = GenerateAllocationRequest(name="OVERFLOW EXAM", exam_date="15-10-2026", session="FN")
     with pytest.raises(ValueError) as excinfo:
         run_seating_allocation(test_db, req)
     assert "Insufficient seating capacity" in str(excinfo.value)
@@ -113,12 +114,12 @@ def test_duplicate_date_and_session_rejected(test_db):
     test_db.add_all(students)
     test_db.commit()
 
-    req1 = GenerateAllocationRequest(name="EXAM 1", exam_date="2026-10-20", session="FN")
+    req1 = GenerateAllocationRequest(name="EXAM 1", exam_date="20-10-2026", session="FN")
     exam1, count1 = run_seating_allocation(test_db, req1)
     assert count1 == 29
 
     # Attempt to generate again with same date and session, even if name is different
-    req2 = GenerateAllocationRequest(name="EXAM 2 DIFFERENT NAME", exam_date="2026-10-20", session="FN", reshuffle=False)
+    req2 = GenerateAllocationRequest(name="EXAM 2 DIFFERENT NAME", exam_date="20-10-2026", session="FN", reshuffle=False)
     with pytest.raises(ValueError) as excinfo:
         run_seating_allocation(test_db, req2)
     assert "Already generated" in str(excinfo.value)
@@ -132,13 +133,34 @@ def test_duplicate_date_and_session_reshuffle_allowed(test_db):
     test_db.add_all(students)
     test_db.commit()
 
-    req1 = GenerateAllocationRequest(name="EXAM ORIGINAL", exam_date="2026-10-25", session="AN")
+    req1 = GenerateAllocationRequest(name="EXAM ORIGINAL", exam_date="25-10-2026", session="AN")
     exam1, _ = run_seating_allocation(test_db, req1)
     orig_id = exam1.id
 
     # Re-shuffle with reshuffle=True should succeed and update existing exam
-    req2 = GenerateAllocationRequest(name="EXAM RESHUFFLE", exam_date="2026-10-25", session="AN", reshuffle=True, seed=999)
+    req2 = GenerateAllocationRequest(name="EXAM RESHUFFLE", exam_date="25-10-2026", session="AN", reshuffle=True, seed=999)
     exam2, count2 = run_seating_allocation(test_db, req2)
     assert exam2.id == orig_id
     assert exam2.seed == 999
     assert count2 == 29
+
+
+def test_exam_date_accepts_strict_dd_mm_yyyy():
+    req = GenerateAllocationRequest(name="OK", exam_date="15-10-2026", session="FN")
+    assert req.exam_date == "15-10-2026"
+
+
+@pytest.mark.parametrize("bad", [
+    "2026-10-15",   # old ISO format
+    "15/10/2026",   # slashes instead of dashes
+    "15-1-2026",    # single-digit month
+    "5-10-2026",    # single-digit day
+    "32-10-2026",   # day out of range
+    "31-02-2026",   # impossible calendar date
+    "15-10-26",     # two-digit year
+    "",
+])
+def test_exam_date_rejects_bad_formats(bad):
+    with pytest.raises(ValidationError) as excinfo:
+        GenerateAllocationRequest(name="BAD", exam_date=bad, session="FN")
+    assert "DD-MM-YYYY" in str(excinfo.value)

@@ -16,7 +16,7 @@ export const GeneratePage: React.FC = () => {
   const queryClient = useQueryClient();
 
   const [examName, setExamName] = useState("END SEMESTER EXAMINATIONS — OCT/NOV 2026");
-  const [examDate, setExamDate] = useState("2026-10-15");
+  const [examDate, setExamDate] = useState("15-10-2026");
   const [session, setSession] = useState("FN");
   const [customSeed, setCustomSeed] = useState<string>("");
   const [resultData, setResultData] = useState<{
@@ -58,16 +58,27 @@ export const GeneratePage: React.FC = () => {
 
   const handleGenerate = (isReshuffle = false) => {
     setErrorMessage(null);
+    const date = examDate.trim();
+    if (!/^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/.test(date)) {
+      setErrorMessage("Exam date must be in DD-MM-YYYY format (e.g. 15-10-2026).");
+      return;
+    }
+    const [d, m, y] = date.split("-").map(Number);
+    const parsed = new Date(y, m - 1, d);
+    if (parsed.getFullYear() !== y || parsed.getMonth() !== m - 1 || parsed.getDate() !== d) {
+      setErrorMessage(`Exam date is not a valid calendar date: ${date}`);
+      return;
+    }
     if (existingExam && !isReshuffle) {
       setErrorMessage(
-        `Already generated: Seating arrangement for date ${examDate} and session ${session} has already been generated (${existingExam.name}). Use "Re-Shuffle with New Seed" to update this existing session.`
+        `Already generated: Seating arrangement for date ${date} and session ${session} has already been generated (${existingExam.name}). Use "Re-Shuffle with New Seed" to update this existing session.`
       );
       return;
     }
     const seedVal = customSeed.trim() ? parseInt(customSeed.trim()) : undefined;
     generateMutation.mutate({
       name: examName,
-      exam_date: examDate,
+      exam_date: date,
       session,
       seed: seedVal,
       reshuffle: isReshuffle,
@@ -182,18 +193,23 @@ export const GeneratePage: React.FC = () => {
             </label>
             <div style={{ position: "relative" }}>
               <input
-                type="date"
+                type="text"
                 value={examDate}
                 onChange={(e) => setExamDate(e.target.value)}
+                placeholder="DD-MM-YYYY"
+                maxLength={10}
                 style={{
                   width: "100%",
                   padding: "10px 14px",
                   borderRadius: "4px",
                   border: "1px solid #cbd5e1",
                   fontSize: "14px",
-                  fontFamily: "'Inter', sans-serif",
+                  fontFamily: "'JetBrains Mono', monospace",
                 }}
               />
+            </div>
+            <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>
+              Format: DD-MM-YYYY (e.g. 15-10-2026)
             </div>
           </div>
 

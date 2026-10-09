@@ -77,7 +77,7 @@ export const DashboardPage: React.FC = () => {
                 {stats.active_exam_name || "END SEMESTER EXAMINATIONS — OCT/NOV 2026"}
               </h2>
               <div style={{ fontSize: "13px", color: "#475569" }}>
-                Date: <strong>{stats.active_exam_date || "15/10/2026"}</strong> &nbsp;|&nbsp; Session: <strong>{stats.active_exam_session ? (stats.active_exam_session === "FN" ? "FN (09:00 AM – 12:00 PM)" : stats.active_exam_session === "AN" ? "AN (01:00 PM – 04:00 PM)" : stats.active_exam_session) : "FN (09:00 AM – 12:00 PM)"}</strong>
+                Date: <strong>{stats.active_exam_date || "15-10-2026"}</strong> &nbsp;|&nbsp; Session: <strong>{stats.active_exam_session ? (stats.active_exam_session === "FN" ? "FN (09:00 AM – 12:00 PM)" : stats.active_exam_session === "AN" ? "AN (01:00 PM – 04:00 PM)" : stats.active_exam_session) : "FN (09:00 AM – 12:00 PM)"}</strong>
               </div>
             </div>
 
@@ -118,7 +118,7 @@ export const DashboardPage: React.FC = () => {
                 {stats.total_students}
               </div>
               <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>
-                16-digit verified candidates
+                Verified candidates (13/16-digit)
               </div>
             </div>
 

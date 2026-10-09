@@ -10,7 +10,8 @@ import {
   XCircle, 
   Info,
   Trash2,
-  ArrowRight
+  ArrowRight,
+  Download
 } from "lucide-react";
 
 export const UploadPage: React.FC = () => {
@@ -78,6 +79,20 @@ export const UploadPage: React.FC = () => {
     }
   };
 
+  const handleDownloadTemplate = async (kind: "dob" | "full") => {
+    try {
+      if (kind === "dob") {
+        await api.downloadDobTemplate();
+      } else {
+        await api.downloadTemplate();
+      }
+    } catch (err) {
+      setStatusMessage(
+        `Template download failed: ${err instanceof Error ? err.message : "unknown error"}`
+      );
+    }
+  };
+
   return (
     <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "24px 28px" }}>
       {/* Page Title */}
@@ -142,11 +157,27 @@ export const UploadPage: React.FC = () => {
                 Excel Template Required & Supported Columns
               </div>
               <div style={{ fontSize: "12px", color: "#64748b" }}>
-                Ensure candidate files use text-formatted cells for 16-digit register numbers
+                Ensure candidate files use text-formatted cells for 13/16-digit register numbers — Date of Birth (DD/MM/YYYY) is required on every row
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <button
+              onClick={() => handleDownloadTemplate("dob")}
+              className="btn-blue"
+              style={{ fontSize: "12px", padding: "6px 12px" }}
+              title="2-column template: Register Number + Date of Birth"
+            >
+              <Download size={14} /> DOB Template
+            </button>
+            <button
+              onClick={() => handleDownloadTemplate("full")}
+              className="btn-outline"
+              style={{ fontSize: "12px", padding: "6px 12px" }}
+              title="Full candidate register template with all columns"
+            >
+              <Download size={14} /> Full Template
+            </button>
             <button
               onClick={() => setShowColumnsGuide(!showColumnsGuide)}
               className="btn-outline"
@@ -170,6 +201,32 @@ export const UploadPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
+                <tr>
+                  <td style={{ fontWeight: 700, color: "#002f66" }}>S.no</td>
+                  <td>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        backgroundColor: "#f1f5f9",
+                        color: "#475569",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: "3px",
+                        letterSpacing: "0.5px"
+                      }}
+                    >
+                      IGNORED
+                    </span>
+                  </td>
+                  <td className="font-mono" style={{ fontSize: "11px", color: "#475569" }}>
+                    S.no, sno, sl no, serial no, serial number
+                  </td>
+                  <td>Integer (1, 2, 3 …)</td>
+                  <td style={{ color: "#334155" }}>
+                    Serial number for your own reference only — the importer skips this column, so you can keep or delete it freely.
+                  </td>
+                </tr>
                 <tr style={{ backgroundColor: "#fefefe" }}>
                   <td style={{ fontWeight: 700, color: "#002f66" }}>Register Number</td>
                   <td>
@@ -193,11 +250,11 @@ export const UploadPage: React.FC = () => {
                   </td>
                   <td>
                     <span className="font-mono" style={{ fontWeight: 600, color: "#b91c1c" }}>
-                      Text (@) — 16 digits
+                      Text (@) — 13 or 16 digits
                     </span>
                   </td>
                   <td style={{ color: "#334155" }}>
-                    Exact 16-digit numeric string (e.g. <code className="font-mono" style={{ fontWeight: 700 }}>2403310910421001</code>). Format cell as Text to prevent 15-digit Excel truncation.
+                    Exactly 13 or 16 numeric digits (e.g. <code className="font-mono" style={{ fontWeight: 700 }}>2403310910421001</code> or <code className="font-mono" style={{ fontWeight: 700 }}>2403310910421</code>). Format cell as Text to prevent 15-digit Excel truncation.
                   </td>
                 </tr>
                 <tr>
@@ -251,7 +308,7 @@ export const UploadPage: React.FC = () => {
                   </td>
                 </tr>
                 <tr>
-                  <td style={{ fontWeight: 600, color: "#334155" }}>Semester</td>
+                  <td style={{ fontWeight: 600, color: "#334155" }}>Course Code</td>
                   <td>
                     <span
                       style={{
@@ -268,11 +325,41 @@ export const UploadPage: React.FC = () => {
                     </span>
                   </td>
                   <td className="font-mono" style={{ fontSize: "11px", color: "#475569" }}>
-                    Semester, Sem, current semester
+                    Course Code, Subject Code, subject, subject_code
                   </td>
-                  <td>Number (1–8)</td>
+                  <td>Text code</td>
                   <td style={{ color: "#334155" }}>
-                    Current semester number (e.g. <span style={{ fontWeight: 500 }}>5</span>).
+                    Subject code for hall roster &amp; notice boards (e.g. <code className="font-mono" style={{ fontWeight: 600 }}>JCS2501</code>).
+                  </td>
+                </tr>
+                <tr style={{ backgroundColor: "#fefefe" }}>
+                  <td style={{ fontWeight: 700, color: "#002f66" }}>Date of Birth</td>
+                  <td>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        backgroundColor: "#fee2e2",
+                        color: "#991b1b",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: "3px",
+                        letterSpacing: "0.5px"
+                      }}
+                    >
+                      REQUIRED (*)
+                    </span>
+                  </td>
+                  <td className="font-mono" style={{ fontSize: "11px", color: "#475569" }}>
+                    Date of Birth, DOB, date_of_birth, birth date, birthdate
+                  </td>
+                  <td>
+                    <span className="font-mono" style={{ fontWeight: 600, color: "#b91c1c" }}>
+                      DD/MM/YYYY
+                    </span>
+                  </td>
+                  <td style={{ color: "#334155" }}>
+                    The student's portal <strong>login password</strong> (e.g. <code className="font-mono" style={{ fontWeight: 700 }}>15/08/2005</code>). Strict two-digit day/month, four-digit year — required on every row; rows without it are rejected.
                   </td>
                 </tr>
                 <tr style={{ backgroundColor: "#fefefe" }}>
@@ -323,8 +410,8 @@ export const UploadPage: React.FC = () => {
         <div style={{ fontSize: "13px", color: "#92400e", lineHeight: "1.5" }}>
           <strong>Important Register Number Precision Advisory:</strong>
           <div>
-            Every candidate register number is a <strong>16-digit numeric text string</strong> (e.g., <code style={{ fontFamily: "monospace", fontWeight: 700 }}>2403310910421108</code>).
-            Microsoft Excel standard numeric cells only hold 15 significant digits and may corrupt the 16th digit or convert to scientific notation (<code style={{ fontFamily: "monospace" }}>2.4033E+15</code>).
+            Every candidate register number is a <strong>13- or 16-digit numeric text string</strong> (e.g., <code style={{ fontFamily: "monospace", fontWeight: 700 }}>2403310910421108</code>).
+            Microsoft Excel standard numeric cells only hold 15 significant digits and may corrupt the 16th digit or convert into scientific notation (<code style={{ fontFamily: "monospace" }}>2.4033E+15</code>).
           </div>
           <div style={{ marginTop: "4px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}>
             <span>💡 Tip: Format the register number column as <u>Text</u> before saving your Excel file.</span>
@@ -386,7 +473,7 @@ export const UploadPage: React.FC = () => {
 
         {uploadMutation.isPending && (
           <div style={{ marginTop: "14px", color: "#0050b3", fontSize: "13px", fontWeight: 600 }}>
-            Analyzing and validating 16-digit register numbers...
+            Analyzing and validating 13/16-digit register numbers...
           </div>
         )}
       </div>
@@ -436,7 +523,7 @@ export const UploadPage: React.FC = () => {
 
             <div style={{ padding: "12px", borderRadius: "4px", backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0" }}>
               <div style={{ fontSize: "11px", color: "#166534", fontWeight: 700, display: "flex", alignItems: "center", gap: "4px" }}>
-                <CheckCircle2 size={13} /> VALID 16-DIGIT ROWS
+                <CheckCircle2 size={13} /> VALID ROWS
               </div>
               <div style={{ fontSize: "22px", fontWeight: 700, color: "#16a34a", marginTop: "4px" }}>
                 {previewData.valid_count}
@@ -537,11 +624,12 @@ export const UploadPage: React.FC = () => {
                 <thead>
                   <tr>
                     <th style={{ width: "50px" }}>#</th>
-                    <th style={{ width: "200px" }}>Register Number (16-Digit)</th>
+                    <th style={{ width: "200px" }}>Register Number</th>
                     <th>Student Name</th>
                     <th>Branch / Degree</th>
                     <th>Semester</th>
                     <th>Course Code</th>
+                    <th style={{ width: "110px" }}>Date of Birth</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -553,6 +641,7 @@ export const UploadPage: React.FC = () => {
                       <td>{st.branch || "-"}</td>
                       <td style={{ textAlign: "center" }}>{st.semester || "-"}</td>
                       <td style={{ textAlign: "center" }}>{st.subject_code || "-"}</td>
+                      <td className="mono-cell" style={{ textAlign: "center" }}>{st.dob || "-"}</td>
                     </tr>
                   ))}
                 </tbody>

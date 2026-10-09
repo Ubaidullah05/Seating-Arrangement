@@ -4,6 +4,114 @@ Track of all changes made to the Exam Seating Planner (Jerusalem College of Engi
 
 ---
 
+## 2026-10-09 (later) — PostgreSQL, Required DOB Uploads, 13/16-Digit Registers & New Halls
+
+### Overview
+
+The whole database moved from SQLite to **PostgreSQL**, uploads now **require a DOB** (the student's portal password) with two downloadable templates, register numbers accept **13 or 16 digits**, and three new exam halls (**LS1, VH1, VH2**) were added on dedicated LS/VH floors.
+
+---
+
+### 1. PostgreSQL (primary database)
+
+| Item | Details |
+|---|---|
+| Database | `exam_seating_db` on `localhost:5432` (user `postgres`, password `postgres`, driver `psycopg`) |
+| Config | `backend/.env` + root `.env` → `DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/exam_seating_db` (files stay gitignored) |
+| Fallback | `database.py` still falls back to the local SQLite file if PostgreSQL is unreachable — SQLite (`backend/exam_seating.db`) is kept as an untouched backup/source |
+| Migration chain | `001 → 002 → 003 → 004` run against PostgreSQL; head = `004_register_len` |
+| Fixes applied for PG | `002_remove_rbac` step 4 (SQLite-only `GLOB` SQL) now dialect-gated; `003_add_auth` ACOE seed uses `TRUE` booleans (PG rejects integer→boolean) |
+| New migration | `backend/alembic/versions/004_register_len.py` — drops `check_register_no_16_digits`, adds `check_register_no_len CHECK (length(register_no) IN (12, 16))` (SQLite branch rebuilds the table only if the old check exists) |
+| New migration | `backend/alembic/versions/005_register_len_13.py` — tightens the check to **`IN (13, 16)`** (12-digit registers later disallowed at the user's request); PG drop/re-add, SQLite rebuild-if-present |
+| Data copy | New `backend/scripts/migrate_sqlite_to_postgres.py` — copies floors(4), classrooms, students(160), exams(1), faculty_users(1), allocations(160) with preserved IDs, bumps PG sequences, verifies counts; `--force` to wipe+redo |
+| Verified | Counts match SQLite; sequences correct; all logins served from PG; after `005`: 13-digit insert accepted / 14-digit `CheckViolation` rejected |
+
+```bash
+# Re-run data copy (aborts if target already has students; --force to wipe first)
+backend\venv\Scripts\python.exe backend\scripts\migrate_sqlite_to_postgres.py
+```
+
+> Note: the server must be **stopped** during `alembic upgrade` + data copy, then restarted — a `uvicorn --reload` worker respawning mid-migration will auto-`create_all` on startup and race the migrations.
+
+---
+
+### 2. Upload section — DOB required + two template buttons
+
+**Backend (`backend/app/routers/students.py`)**
+
+- Missing **Date of Birth** column in an uploaded file → **400** with an explanatory message (previously the file was accepted without DOBs).
+- A row with a blank DOB cell → **invalid row** (`Date of birth is required — it is the student's portal login password…`). Format rules unchanged: strict `DD/MM/YYYY` + real calendar date.
+- Existing register **with** a DOB in the file → still valid (overwrites stored DOB); existing register without a DOB in the file → duplicate (as before).
+- New endpoint **`GET /api/v1/students/dob-template`** → `dob_template.xlsx` — exactly **two columns: Register Number (Text-formatted) + Date of Birth**, with header comments and two harmless sample rows.
+
+**Frontend (`frontend/src/pages/UploadPage.tsx`, `frontend/src/api/client.ts`)**
+
+- Columns-guide table gained a **Date of Birth — REQUIRED (*)** row (aliases, `DD/MM/YYYY` rule, login-password explanation).
+- Valid-preview table now shows a **Date of Birth** column.
+- Two new buttons in the template card: **⬇ DOB Template** (2-column file) and **⬇ Full Template** (all columns) — the latter wires the previously unused `/students/template` download. Failures surface in the status banner instead of failing silently.
+- The **full template now starts with an `S.no` column** (serial number for the coordinator's reference, auto-numbered 1–10 on the sample rows). The upload parser ignores it entirely (unknown headers are skipped), the guidelines sheet and the UploadPage columns guide both document it as *Ignored*, and the Excel advisory now correctly says register numbers live in **Column B**.
+
+---
+
+### 3. Register numbers accept 13 or 16 digits (exactly; 12, 14, 15 rejected)
+
+| Layer | Change |
+|---|---|
+| `backend/app/security.py` | `REGISTER_NO_RE = ^(?:\d{13}|\d{16})$` |
+| `backend/app/schemas.py` | Pydantic validator + field descriptions |
+| `backend/app/routers/students.py` | Upload preview check + error text (`Must be exactly 13 or 16 numeric digits…`) |
+| `backend/app/routers/auth.py` | Login rejection message |
+| `backend/app/models.py` + migrations `004`/`005` | DB CHECK `length(register_no) IN (13, 16)` (PG + SQLite branches) |
+| `backend/app/template_generator.py` | Template header comments, guidelines and advisory text |
+| `LoginPage.tsx` | Client regex + error message (input still capped at 16) |
+| `UploadPage.tsx` | Guide/advisory/badges/loading copy → "13 or 16 digits" |
+| `DashboardPage` / `SearchPage` / `SeatingPlansPage` / `types` | Labels & hints updated |
+
+Search (exact + suffix matching), exports, allocation, backfill script and seed data already treat registers as generic strings — no changes needed.
+
+---
+
+### 4. New exam halls — LS1, VH1, VH2
+
+- Added as **three separate classrooms** on dedicated floors (same structure `seed_data.py` already modelled):
+  - Floor **LS** (floor_number 4) → **LS1**
+  - Floor **VH** (floor_number 5) → **VH1**, **VH2**
+- Each: **4 columns × 7 rows = seats A1–D7, capacity 28**, active — identical to the M-series halls.
+- Inserted into **both** PostgreSQL (primary) and the SQLite backup file; `seed_data.py` spec aligned (`LS1` / `VH1` / `VH2`, dropped the old hyphenated `LS-1`/`VH-1`/`VH-3` names).
+- Classroom count: **29 → 32**. New halls participate in allocation automatically (ordered after the M-series rooms).
+
+---
+
+### 5. Examination date format — DD-MM-YYYY
+
+Exam dates changed from ISO `YYYY-MM-DD` to **`DD-MM-YYYY`** (e.g. `15-10-2026`) end-to-end — the value is stored as-is in `exams.exam_date` (string column) and displayed unchanged everywhere.
+
+| Layer | Change |
+|---|---|
+| `backend/app/schemas.py` | `_validate_exam_date_format()` — strict `DD-MM-YYYY` + real calendar date; applied to `ExamBase` (create/response) and `GenerateAllocationRequest` (default `15-10-2026`). Old ISO dates, slashes, single-digit parts, `32-10-2026`, `31-02-2026` etc. → **422** with a clear message |
+| Existing data | All exam rows converted in **both** databases (`2026-10-15` → `15-10-2026`, etc.) |
+| `GeneratePage.tsx` | Native date picker replaced with a **DD-MM-YYYY text input** (mono font, placeholder, helper line) + client-side format/calendar validation before submit |
+| `StudentPortalPage.tsx` | `formatExamDate()` now parses `DD-MM-YYYY` (was `YYYY-MM-DD`) |
+| `DashboardPage.tsx` | Fallback date placeholder updated |
+| Display & exports | Dashboard, Seating Plans list/summary, student portal, PDF/XLSX notice-board & seating headers, and download filenames pick up the new format automatically (they echo `exam.exam_date`) |
+
+Ordering/exams lists sort by `id`, never by the date string, so the non-sortable format is safe. Duplicate detection (`exam_date` + `session`) keeps working since both sides use the same canonical format.
+
+---
+
+### 6. Testing (this round)
+
+| Suite | Result |
+|---|---|
+| Backend unit/API tests (`pytest`) | **59 passed** — includes new/updated tests: 13-digit schema accept + 12/14/15-digit reject, DOB column required (400), blank-DOB invalid, 13-digit upload end-to-end, DOB-template download shape, DOB overwrite/invalid-format, backfill determinism, exam-date `DD-MM-YYYY` accept + 8 rejected bad formats (ISO, slashes, short parts, impossible dates) |
+| Live E2E on PostgreSQL (`e2e_pg.py` + follow-ups) | **21/21 passed** — faculty + student logins, 3 bad DOB formats rejected, both template downloads (2-column shape verified), missing-DOB 400, upload→commit→login→cleanup round-trip, overwrite-path valid, LS1/VH1/VH2 + LS/VH floors via API, 401/403 guards; exam-date round: exams/dashboard return `DD-MM-YYYY`, ISO & impossible dates → **422**, valid `DD-MM-YYYY` passes schema validation; seats view + export (200, `…_15-10-2026.xlsx` filename) verified after regeneration; register-length round (post-`005`): 12-digit login → **400 "13 or 16"**, 13-digit login → 401 (format ok, unknown student), 14-digit → 400, 16-digit → 200, upload accepts 13 / rejects 12 & 14, PG CHECK: 13-digit insert OK, 14-digit `CheckViolation` |
+| Frontend lint (`oxlint`) | **0 warnings, 0 errors** |
+| Frontend build (`tsc -b && vite build`) | **Passes** |
+
+> **Note — seating regenerated with new seeds (2026-10-09).** `allocations.student_id` has `ON DELETE CASCADE`, so a *Clear All Students* wiped all seating (re-importing students does not restore it). All exams were re-generated via reshuffle with **fresh random seeds** (`seed: null` → server auto-generates 6-digit seed): current state = **5 exams × 10 students = 50 allocations**, all in room M001 (10 students need only one room; first room fills first). The roster at review time was the 10 sample students (`2403310910421001`–`…1010`); restore the full 160-student file by re-uploading it and re-generating if needed.
+
+---
+
 ## 2026-10-09 — RBAC Authentication, Student Exam-Hall Portal & Mobile-Friendly UI
 
 ### Overview
@@ -138,8 +246,14 @@ Test infrastructure: `backend/tests/conftest.py` now owns a shared in-memory DB 
 
 ---
 
-### How to test manually
+### How to test manually (current)
 
-1. **Faculty:** open `/login` → *Faculty & Staff* tab → `acoe@jerusalemengg.ac.in` / `acoe@123` → you are prompted (amber *Set Password* button) to change the password.
-2. **Student:** all 160 students already have sample DOBs (backfilled) — `/login` → *Student* tab → e.g. `2403310910421001` + `15/08/2005` → shows only their exam hall/seat. When real dates arrive, re-upload the register with the Date of Birth column (existing DOBs are overwritten) or run `backend/scripts/backfill_dob.py --input real_dobs.csv`.
-3. Try a wrong DOB format (`2005-08-15`, `15-08-2005`) or a non-institutional email — both are rejected.
+> Server must run against PostgreSQL: `backend\venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000` (confirm startup log shows the PG engine, no SQLite fallback).
+
+1. **Faculty:** `/login` → *Faculty & Staff* tab → `acoe@jerusalemengg.ac.in` / `acoe@123` → amber *Set Password* prompt appears.
+2. **Student (16-digit):** `/login` → *Student* tab → `2403310910421001` + `15/08/2005` → My Exam Hall with seat. Try wrong formats (`2005-08-15`, `15-08-2005`) or a 12-digit register — rejected with clear messages.
+3. **Student (13-digit):** works the same way once a 13-digit register exists (upload one via the preview→commit flow; test round confirmed upload → login → logout end-to-end). 12- and 14-digit registers are rejected at login, upload and DB level.
+4. **Upload page:** columns guide shows Date of Birth as **REQUIRED**; download both **DOB Template** and **Full Template** buttons (xlsx opens; DOB template has exactly 2 columns; full template starts with an ignored `S.no` column). Uploading a file *without* a DOB column → error; a row with blank DOB → invalid row with reason.
+5. **Exam date:** Generate page → date field accepts **DD-MM-YYYY only** (e.g. `15-10-2026`) — `2026-10-15` or `31-02-2026` show a validation error; dashboard, Seating Plans list, student portal and export filenames all display `DD-MM-YYYY`.
+6. **Rooms page:** `LS` floor has **LS1**, `VH` floor has **VH1/VH2** — each A1–D7 (28 seats); generate a seating plan and confirm new halls fill after the M-series rooms.
+7. Backups: `backend/exam_seating.db` (SQLite) still holds the full pre-migration copy — untouched.

@@ -1,6 +1,6 @@
 export interface Student {
   id: number;
-  register_no: string; // 16 digits
+  register_no: string; // 13 or 16 digits
   name?: string | null;
   branch?: string | null;
   semester?: number | null;

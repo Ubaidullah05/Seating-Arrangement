@@ -95,7 +95,7 @@ def student_login(payload: StudentLoginRequest, db: Session = Depends(get_db)):
     if not is_valid_register_no(register_no):
         raise HTTPException(
             status_code=400,
-            detail="Register number must be exactly 16 numeric digits.",
+            detail="Register number must be exactly 13 or 16 numeric digits.",
         )
     if not is_strict_ddmmyyyy(password):
         raise HTTPException(

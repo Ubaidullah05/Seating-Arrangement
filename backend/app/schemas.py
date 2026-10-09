@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict
 import re
 
 class StudentBase(BaseModel):
-    register_no: str = Field(..., description="Exact 16-digit numeric register number")
+    register_no: str = Field(..., description="13- or 16-digit numeric register number")
     name: Optional[str] = None
     branch: Optional[str] = None
     semester: Optional[int] = None
@@ -17,8 +17,10 @@ class StudentBase(BaseModel):
     @classmethod
     def validate_register_no(cls, v: str) -> str:
         s = str(v).strip().lstrip("'")
-        if not re.match(r"^\d{16}$", s):
-            raise ValueError(f"Register number must be exactly 16 numeric digits, received: '{s}'")
+        if not re.match(r"^(?:\d{13}|\d{16})$", s):
+            raise ValueError(
+                f"Register number must be exactly 13 or 16 numeric digits, received: '{s}'"
+            )
         return s
 
     @field_validator("dob")
@@ -113,11 +115,31 @@ class FloorResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+def _validate_exam_date_format(v: str) -> str:
+    """Strict DD-MM-YYYY calendar check (e.g. 15-10-2026)."""
+    from datetime import datetime
+    s = str(v).strip()
+    if not re.match(r"^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$", s):
+        raise ValueError(
+            f"Exam date must be in DD-MM-YYYY format, received: '{s}'"
+        )
+    try:
+        datetime.strptime(s, "%d-%m-%Y")
+    except ValueError:
+        raise ValueError(f"Exam date is not a valid calendar date (DD-MM-YYYY): '{s}'")
+    return s
+
+
 class ExamBase(BaseModel):
     name: str
-    exam_date: str
+    exam_date: str = Field(..., description="Examination date in strict DD-MM-YYYY format")
     session: str # "FN" or "AN"
     seed: Optional[int] = None
+
+    @field_validator("exam_date")
+    @classmethod
+    def validate_exam_date(cls, v: str) -> str:
+        return _validate_exam_date_format(v)
 
 class ExamCreate(ExamBase):
     pass
@@ -132,10 +154,15 @@ class ExamResponse(ExamBase):
 
 class GenerateAllocationRequest(BaseModel):
     name: str = "END SEMESTER EXAMINATIONS - OCT/NOV 2026"
-    exam_date: str = "2026-10-15"
+    exam_date: str = Field("15-10-2026", description="Examination date in strict DD-MM-YYYY format")
     session: str = "FN"
     seed: Optional[int] = None
     reshuffle: bool = False
+
+    @field_validator("exam_date")
+    @classmethod
+    def validate_exam_date(cls, v: str) -> str:
+        return _validate_exam_date_format(v)
 
 
 class AllocationItemResponse(BaseModel):
@@ -214,7 +241,7 @@ class DashboardStats(BaseModel):
 # Authentication schemas
 # ---------------------------------------------------------------------------
 class StudentLoginRequest(BaseModel):
-    register_no: str = Field(..., description="16-digit register number")
+    register_no: str = Field(..., description="13- or 16-digit register number")
     password: str = Field(..., description="Date of birth in DD/MM/YYYY format")
 
 

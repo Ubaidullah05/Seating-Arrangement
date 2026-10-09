@@ -10,7 +10,7 @@ function formatExamDate(dateStr: string, session: string): string {
   const sessionLabel = session === "FN" ? "Forenoon" : session === "AN" ? "Afternoon" : session;
   const parts = dateStr.split("-");
   if (parts.length !== 3) return `${dateStr} · ${sessionLabel}`;
-  const [y, m, d] = parts.map(Number);
+  const [d, m, y] = parts.map(Number);
   const date = new Date(y, m - 1, d);
   const formatted = date.toLocaleDateString("en-IN", {
     weekday: "short",

@@ -16,7 +16,7 @@ import { useAuth } from "../authContext";
 
 type Tab = "student" | "faculty";
 
-const REGISTER_RE = /^\d{16}$/;
+const REGISTER_RE = /^(?:\d{13}|\d{16})$/;
 const DOB_RE = /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/;
 const FACULTY_EMAIL_RE = /^[A-Za-z0-9._%+-]+@jerusalemengg\.ac\.in$/;
 
@@ -58,7 +58,7 @@ export const LoginPage: React.FC = () => {
     const dobValue = dob.trim();
 
     if (!REGISTER_RE.test(reg)) {
-      setError("Register number must be exactly 16 numeric digits.");
+      setError("Register number must be exactly 13 or 16 numeric digits.");
       return;
     }
     if (!isValidDob(dobValue)) {

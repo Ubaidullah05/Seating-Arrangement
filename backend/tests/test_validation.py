@@ -7,6 +7,19 @@ def test_valid_16_digit_register_no():
     s = StudentBase(register_no=reg, name="Valid Student")
     assert s.register_no == reg
 
+def test_valid_13_digit_register_no():
+    reg = "2403310910421"
+    s = StudentBase(register_no=reg, name="Thirteen Digit Student")
+    assert s.register_no == reg
+
+def test_reject_12_digits():
+    with pytest.raises(ValidationError):
+        StudentBase(register_no="240331091042") # 12 digits
+
+def test_reject_14_digits():
+    with pytest.raises(ValidationError):
+        StudentBase(register_no="24033109104210") # 14 digits
+
 def test_preserve_leading_zeros():
     reg = "0003310910421108"
     s = StudentBase(register_no=reg)

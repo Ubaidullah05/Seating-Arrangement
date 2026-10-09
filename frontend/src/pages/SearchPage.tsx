@@ -60,7 +60,7 @@ export const SearchPage: React.FC = () => {
       >
         <form onSubmit={handleSearch}>
           <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "8px" }}>
-            ENTER 16-DIGIT REGISTER NUMBER (OR LAST 3-4 DIGITS)
+            ENTER REGISTER NUMBER (13/16 DIGITS OR LAST 3-4 DIGITS)
           </label>
           <div style={{ display: "flex", gap: "10px" }}>
             <div style={{ position: "relative", flex: 1 }}>
@@ -96,7 +96,7 @@ export const SearchPage: React.FC = () => {
             </button>
           </div>
           <div style={{ fontSize: "11px", color: "#64748b", marginTop: "6px" }}>
-            Accepts full 16 digits (exact match), suffix matching (last 3-4 digits), or student name.
+            Accepts a full 13/16-digit register number (exact match), suffix matching (last 3-4 digits), or student name.
           </div>
         </form>
       </div>

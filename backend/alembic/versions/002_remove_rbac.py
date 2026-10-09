@@ -50,8 +50,11 @@ def upgrade() -> None:
         bind.execute(sa.text("DELETE FROM allocations WHERE exam_id = :id"), {"id": eid})
         bind.execute(sa.text("DELETE FROM exams WHERE id = :id"), {"id": eid})
 
-    # 4. Restore any classroom whose rows_per_column is below allocated seat rows
-    bind.execute(sa.text("""
+    # 4. Restore any classroom whose rows_per_column is below allocated seat rows.
+    #    (GLOB is SQLite-only syntax — skip on PostgreSQL, where data is loaded
+    #     separately from an already-repaired SQLite source.)
+    if bind.dialect.name == "sqlite":
+        bind.execute(sa.text("""
         UPDATE classrooms
         SET rows_per_column = (
             SELECT MAX(CAST(SUBSTR(a.seat_label, 2) AS INTEGER))

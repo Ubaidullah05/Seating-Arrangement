@@ -56,7 +56,7 @@ def upgrade() -> None:
         bind.execute(
             sa.text(
                 "INSERT INTO faculty_users (email, name, hashed_password, must_change_password, is_active) "
-                "VALUES (:email, :name, :pwd, 1, 1)"
+                "VALUES (:email, :name, :pwd, TRUE, TRUE)"
             ),
             {
                 "email": DEFAULT_FACULTY_EMAIL,

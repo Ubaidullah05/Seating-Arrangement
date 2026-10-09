@@ -19,8 +19,8 @@ def seed_database(target_students: int = 924, force: bool = False):
             (1, "First Floor", ["M101", "M102", "M103", "M104", "M105", "M106", "M107", "M108"]),
             (2, "Second Floor", ["M201", "M202", "M203", "M204", "M205", "M206", "M207", "M208"]),
             (3, "Third Floor", ["M301", "M302", "M303", "M304", "M305"]),
-            (4, "LS", ["LS-1"]),
-            (5, "VH", ["VH-1", "VH-2", "VH-3"]),
+            (4, "LS", ["LS1"]),
+            (5, "VH", ["VH1", "VH2"]),
         ]
 
         for floor_num, floor_name, room_names in floors_spec:

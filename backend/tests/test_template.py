@@ -17,14 +17,16 @@ def test_template_workbook_structure():
 
     ws = wb["Candidate Register"]
     headers = [cell.value for cell in ws[1]]
+    assert headers[0] == "S.no"
     assert "Register Number" in headers
     assert "Student Name" in headers
     assert "Branch" in headers
     assert "Semester" in headers
     assert "Course Code" in headers
+    assert "Date of Birth" in headers
 
-    # Verify column A has text format '@'
-    assert ws["A2"].number_format == "@"
+    # Verify Register Number column (B) has text format '@'
+    assert ws["B2"].number_format == "@"
 
 def test_template_download_endpoint():
     response = client.get("/api/v1/students/template")
@@ -35,6 +37,7 @@ def test_template_download_endpoint():
     # Read response bytes with pandas
     df = pd.read_excel(io.BytesIO(response.content), sheet_name="Candidate Register", dtype=str)
     assert len(df) >= 5
+    assert list(df.columns)[0] == "S.no"
     assert "Register Number" in df.columns
     # Check that register numbers are exact 16 digits
     for reg in df["Register Number"]:
@@ -61,9 +64,9 @@ def test_template_upload_preview_integration():
     # Test uploading Excel with newly generated numbers
     wb = build_template_workbook()
     ws = wb["Candidate Register"]
-    # Change register numbers to unique test numbers
+    # Change register numbers (column B) to unique test numbers
     for i in range(2, 12):
-        ws.cell(row=i, column=1).value = f"888800001111{i:04d}"
+        ws.cell(row=i, column=2).value = f"888800001111{i:04d}"
     
     test_buf = io.BytesIO()
     wb.save(test_buf)

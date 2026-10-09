@@ -26,8 +26,8 @@ class Student(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "length(register_no) = 16",
-            name="check_register_no_16_digits"
+            "length(register_no) IN (13, 16)",
+            name="check_register_no_len"
         ),
     )
 
@@ -70,7 +70,7 @@ class Exam(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(150), nullable=False) # "END SEMESTER EXAMINATIONS - OCT/NOV 2026"
-    exam_date = Column(String(50), nullable=False) # "2026-10-15"
+    exam_date = Column(String(50), nullable=False) # "15-10-2026"
     session = Column(String(10), nullable=False) # "FN" or "AN"
     seed = Column(Integer, nullable=True) # Random seed for reproducibility
     created_at = Column(DateTime, default=utcnow)

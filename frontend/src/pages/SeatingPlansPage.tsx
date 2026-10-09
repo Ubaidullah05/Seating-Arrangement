@@ -132,7 +132,7 @@ export const SeatingPlansPage: React.FC = () => {
                   opacity: downloading && downloading !== "xlsx" ? 0.6 : 1,
                   backgroundColor: "#ffffff",
                 }}
-                title="Download Excel file preserving 16-digit register numbers as text"
+                title="Download Excel file preserving register numbers as text"
               >
                 {downloading === "xlsx" ? (
                   <Loader2 size={15} className="animate-spin" color="#16a34a" />

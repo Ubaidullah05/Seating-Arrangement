@@ -13,7 +13,7 @@ from backend.app.schemas import (
     InvalidRow, DuplicateRow, StudentSearchResult, AllocationItemResponse
 )
 from backend.app import crud
-from backend.app.template_generator import generate_candidate_template_xlsx
+from backend.app.template_generator import generate_candidate_template_xlsx, generate_dob_template_xlsx
 
 router = APIRouter(prefix="/api/v1/students", tags=["students"])
 
@@ -61,13 +61,26 @@ def find_column(df_columns, synonyms):
 async def download_template():
     """
     Generates and downloads a pre-formatted XLSX candidate register template
-    with 16-digit text format cells and all required/optional columns.
+    with 13/16-digit text format cells and all required/optional columns.
     """
     buf = generate_candidate_template_xlsx()
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": 'attachment; filename="candidate_register_template.xlsx"'}
+    )
+
+@router.get("/dob-template")
+async def download_dob_template():
+    """
+    Generates and downloads the lightweight 2-column template
+    (Register Number + Date of Birth) for assigning portal passwords.
+    """
+    buf = generate_dob_template_xlsx()
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="dob_template.xlsx"'}
     )
 
 @router.post("/upload-preview", response_model=UploadPreviewResponse)
@@ -77,7 +90,8 @@ async def upload_preview(
 ):
     """
     Parses uploaded CSV or XLSX file using pandas with dtype=str.
-    Validates 16-digit register numbers, detects Excel scientific notation / float corruption,
+    Validates 13/16-digit register numbers, detects Excel scientific notation / float corruption,
+    requires a strict DD/MM/YYYY date of birth per row (portal login password),
     checks duplicates, and returns a detailed preview.
     """
     filename = file.filename or "upload"
@@ -131,6 +145,17 @@ async def upload_preview(
     sub_col = find_column(df.columns, SUBJECT_SYNONYMS)
     dob_col = find_column(df.columns, DOB_SYNONYMS)
 
+    # Date of birth is the student's portal password — every upload must carry it
+    if not dob_col:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Missing required 'Date of Birth' column. Found columns: "
+                f"{list(df.columns)}. Every student needs a DOB (strict DD/MM/YYYY) "
+                "to sign in to the portal. Download the template for the exact format."
+            )
+        )
+
     # Fetch existing register numbers and DOBs in DB
     existing_in_db = {
         r[0]: r[1]
@@ -164,13 +189,13 @@ async def upload_preview(
             )
             continue
 
-        # 2. Exact 16 numeric digits check
-        if not re.match(r"^\d{16}$", cleaned_val):
+        # 2. Exact 13 or 16 numeric digits check
+        if not re.match(r"^(?:\d{13}|\d{16})$", cleaned_val):
             invalid_rows.append(
                 InvalidRow(
                     row_number=row_num,
                     raw_value=raw_val,
-                    reason=f"Must be exactly 16 numeric digits (found {len(cleaned_val)} characters: '{cleaned_val}')."
+                    reason=f"Must be exactly 13 or 16 numeric digits (found {len(cleaned_val)} characters: '{cleaned_val}')."
                 )
             )
             continue
@@ -186,32 +211,41 @@ async def upload_preview(
             )
             continue
 
-        # 4. Date of birth validation — strict DD/MM/YYYY only
+        # 4. Date of birth validation — REQUIRED, strict DD/MM/YYYY only
+        #    (DOB is the student's portal login password)
         dob_raw = str(row[dob_col]).strip() if dob_col and dob_col in row and row[dob_col] else ""
         dob_val: Optional[str] = None
-        if dob_raw and dob_raw.lower() != "nan":
-            from datetime import datetime
-            if not re.match(r"^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/\d{4}$", dob_raw):
-                invalid_rows.append(
-                    InvalidRow(
-                        row_number=row_num,
-                        raw_value=dob_raw,
-                        reason="Date of birth must be in DD/MM/YYYY format (e.g. 15/08/2005). No other formats are accepted.",
-                    )
+        if not dob_raw or dob_raw.lower() == "nan":
+            invalid_rows.append(
+                InvalidRow(
+                    row_number=row_num,
+                    raw_value=cleaned_val,
+                    reason="Date of birth is required — it is the student's portal login password (strict DD/MM/YYYY, e.g. 15/08/2005).",
                 )
-                continue
-            try:
-                datetime.strptime(dob_raw, "%d/%m/%Y")
-            except ValueError:
-                invalid_rows.append(
-                    InvalidRow(
-                        row_number=row_num,
-                        raw_value=dob_raw,
-                        reason=f"Date of birth is not a valid calendar date: '{dob_raw}'.",
-                    )
+            )
+            continue
+        from datetime import datetime
+        if not re.match(r"^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/\d{4}$", dob_raw):
+            invalid_rows.append(
+                InvalidRow(
+                    row_number=row_num,
+                    raw_value=dob_raw,
+                    reason="Date of birth must be in DD/MM/YYYY format (e.g. 15/08/2005). No other formats are accepted.",
                 )
-                continue
-            dob_val = dob_raw
+            )
+            continue
+        try:
+            datetime.strptime(dob_raw, "%d/%m/%Y")
+        except ValueError:
+            invalid_rows.append(
+                InvalidRow(
+                    row_number=row_num,
+                    raw_value=dob_raw,
+                    reason=f"Date of birth is not a valid calendar date: '{dob_raw}'.",
+                )
+            )
+            continue
+        dob_val = dob_raw
 
         # 5. Duplicate check against database.
         #    If the DB record already exists BUT this file supplies a DOB,

@@ -58,7 +58,7 @@ def test_upload_existing_with_dob_is_valid_and_overwrites():
     assert refreshed.dob == "15/09/2004"
 
 
-def test_upload_existing_without_dob_is_duplicate():
+def test_upload_missing_dob_column_rejected():
     _seed_student("01/01/2000")
     csv_bytes = _csv_bytes(
         "Register Number,Student Name,Branch,Semester,Course Code",
@@ -66,11 +66,78 @@ def test_upload_existing_without_dob_is_duplicate():
     )
 
     response = _preview(csv_bytes)
+    assert response.status_code == 400
+    body = response.json()
+    message = body.get("message") or body.get("detail") or ""
+    assert "date of birth" in message.lower()
+
+
+def test_upload_blank_dob_cell_is_invalid():
+    _seed_student("01/01/2000")
+    csv_bytes = _csv_bytes(
+        "Register Number,Student Name,Branch,Semester,Course Code,Date of Birth",
+        "7777000011112223,Blank DOB Student,B.E. Computer Science and Engineering,5,JCS2501,",
+    )
+
+    response = _preview(csv_bytes)
     assert response.status_code == 200
     data = response.json()
+    assert data["invalid_count"] == 1
     assert data["valid_count"] == 0
-    assert data["duplicate_count"] == 1
-    assert data["duplicate_rows"][0]["register_no"] == EXISTING_REG
+    assert "required" in data["invalid_rows"][0]["reason"].lower()
+
+
+def test_upload_accepts_13_digit_register_with_dob():
+    csv_bytes = _csv_bytes(
+        "Register Number,Student Name,Branch,Semester,Course Code,Date of Birth",
+        "2403310910421,Thirteen Digit Student,B.E. Computer Science and Engineering,5,JCS2501,15/08/2005",
+    )
+
+    response = _preview(csv_bytes)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["valid_count"] == 1
+    assert data["invalid_count"] == 0
+    assert data["all_valid"][0]["register_no"] == "2403310910421"
+
+    commit = client.post(
+        "/api/v1/students/commit-upload",
+        json={"students": data["all_valid"]},
+    )
+    assert commit.status_code == 200
+
+    created = _test_db.query(Student).filter(Student.register_no == "2403310910421").first()
+    assert created is not None
+    assert created.dob == "15/08/2005"
+    _test_db.delete(created)
+    _test_db.commit()
+
+
+def test_upload_rejects_12_digit_register():
+    csv_bytes = _csv_bytes(
+        "Register Number,Student Name,Branch,Semester,Course Code,Date of Birth",
+        "240331091042,Twelve Digit,B.E. Computer Science and Engineering,5,JCS2501,15/08/2005",
+    )
+
+    response = _preview(csv_bytes)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["invalid_count"] == 1
+    assert "13 or 16" in data["invalid_rows"][0]["reason"]
+
+
+def test_dob_template_download():
+    response = client.get("/api/v1/students/dob-template")
+    assert response.status_code == 200
+    assert "dob_template.xlsx" in response.headers.get("content-disposition", "")
+
+    import io
+    import pandas as pd
+    df = pd.read_excel(io.BytesIO(response.content), dtype=str)
+    assert list(df.columns) == ["Register Number", "Date of Birth"]
+    for dob in df["Date of Birth"]:
+        assert len(str(dob).strip()) == 10
+        assert str(dob).strip()[2] == "/" and str(dob).strip()[5] == "/"
 
 
 def test_upload_invalid_dob_format_rejected():

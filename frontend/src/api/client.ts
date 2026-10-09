@@ -170,6 +170,10 @@ export const api = {
   downloadTemplate: async (): Promise<void> => {
     return downloadFileFromUrl(`${API_BASE}/students/template`, "candidate_register_template.xlsx");
   },
+
+  downloadDobTemplate: async (): Promise<void> => {
+    return downloadFileFromUrl(`${API_BASE}/students/dob-template`, "dob_template.xlsx");
+  },
 };
 
 /**

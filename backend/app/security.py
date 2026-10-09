@@ -4,7 +4,7 @@ Authentication utilities for the Exam Seating Planner.
 - Password hashing: PBKDF2-HMAC-SHA256 (stdlib, no external dependencies)
 - Session tokens: HMAC-SHA256 signed payload (stdlib, no external dependencies)
 - Strict credential format validators:
-    * Students  : register number = exactly 16 digits, password = DOB in DD/MM/YYYY
+    * Students  : register number = exactly 13 or 16 digits, password = DOB in DD/MM/YYYY
     * Faculty   : institutional email ending @jerusalemengg.ac.in
 """
 import base64
@@ -95,7 +95,7 @@ def decode_token(token: str) -> Optional[Dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # Strict credential format validators
 # ---------------------------------------------------------------------------
-REGISTER_NO_RE = re.compile(r"^\d{16}$")
+REGISTER_NO_RE = re.compile(r"^(?:\d{13}|\d{16})$")
 # Strict DD/MM/YYYY: two-digit day, two-digit month, four-digit year, slashes only.
 DOB_RE = re.compile(r"^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/\d{4}$")
 # Institutional email: anything @jerusalemengg.ac.in (single @, no spaces).
