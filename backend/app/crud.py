@@ -114,11 +114,13 @@ def bulk_import_students(db: Session, students_data: List[StudentCreate]) -> int
                 )
             )
             existing[s.register_no] = s.dob
-        elif s.dob and not existing[s.register_no]:
-            # Fill a missing DOB on an existing record so the student can sign in
+        elif s.dob and existing[s.register_no] != s.dob:
+            # Overwrite the stored DOB when the upload provides one
+            # (fills missing dates and corrects wrong/sample dates)
             student = db.query(Student).filter(Student.register_no == s.register_no).first()
             if student is not None:
                 student.dob = s.dob
+                existing[s.register_no] = s.dob
                 updated += 1
 
     if new_objs:

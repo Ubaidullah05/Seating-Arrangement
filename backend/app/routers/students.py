@@ -214,20 +214,19 @@ async def upload_preview(
             dob_val = dob_raw
 
         # 5. Duplicate check against database.
-        #    Allowed through when the DB record has no DOB yet and this file
-        #    supplies one — the commit will fill the missing DOB so the
-        #    student can sign in to the portal.
-        if cleaned_val in existing_in_db:
-            db_dob = existing_in_db[cleaned_val]
-            if not (dob_val and not db_dob):
-                duplicate_rows.append(
-                    DuplicateRow(
-                        row_number=row_num,
-                        register_no=cleaned_val,
-                        reason="Register number already exists in the database."
-                    )
+        #    If the DB record already exists BUT this file supplies a DOB,
+        #    treat the row as valid — the commit will overwrite the stored
+        #    DOB (lets the exam office correct sample/real dates later).
+        #    Without a DOB in the file, existing registers stay duplicates.
+        if cleaned_val in existing_in_db and not dob_val:
+            duplicate_rows.append(
+                DuplicateRow(
+                    row_number=row_num,
+                    register_no=cleaned_val,
+                    reason="Register number already exists in the database."
                 )
-                continue
+            )
+            continue
 
         seen_in_file.add(cleaned_val)
 

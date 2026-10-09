@@ -46,9 +46,28 @@ Role-based login (RBAC) was added to the portal with two roles — **Student** a
 ### 2. Student Upload Template (DOB column)
 
 - `backend/app/template_generator.py` — template now includes a **Date of Birth** column (F) with `DD/MM/YYYY` sample data, header comment, and a guidelines row.
-- `backend/app/routers/students.py` — upload parsing accepts DOB (`date of birth`, `dob`, … synonyms); invalid DOB formats are reported per-row; re-uploading a file with DOBs **fills missing DOBs** on existing students so they can sign in.
-- `backend/app/crud.py` — `bulk_import_students` stores `dob` and fills blanks on existing records.
+- `backend/app/routers/students.py` — upload parsing accepts DOB (`date of birth`, `dob`, … synonyms); invalid DOB formats are reported per-row; a file that supplies a DOB for an existing register is **valid, not a duplicate** — the commit **overwrites** the stored DOB (fills blanks *and* corrects sample/real dates). Existing registers without a DOB in the file stay duplicates.
+- `backend/app/crud.py` — `bulk_import_students` stores `dob`, fills blanks, and updates DOBs that changed.
 - `backend/app/schemas.py` — `StudentBase.dob` validated strictly (`DD/MM/YYYY` + real date).
+
+### 2a. DOB Backfill Script (sample DOBs)
+
+New file: `backend/scripts/backfill_dob.py` — all **160 students now have a DOB** (previously 0), so students can sign in immediately.
+
+```bash
+# Fill only students with no DOB (safe, re-runnable)
+backend\venv\Scripts\python.exe backend\scripts\backfill_dob.py
+
+# Regenerate sample DOBs over existing values
+backend\venv\Scripts\python.exe backend\scripts\backfill_dob.py --overwrite
+
+# Apply real DOBs from a CSV (columns: register_no, date_of_birth)
+backend\venv\Scripts\python.exe backend\scripts\backfill_dob.py --input real_dobs.csv
+```
+
+- The 10 template register numbers get their exact template DOBs (`2403310910421001` → `15/08/2005`, …); the other 150 get **deterministic** sample DOBs derived from the register number (valid calendar dates in 2004–2006, same input → same date).
+- `--input` validates every date strictly (`DD/MM/YYYY`) and aborts on the first invalid one; it also reports CSV registers missing from the DB.
+- Real data can also be loaded through the regular upload flow (the overwrite behavior in §2).
 
 ---
 
@@ -101,7 +120,7 @@ New file: `frontend/src/pages/StudentPortalPage.tsx`
 
 | Suite | Result |
 |---|---|
-| Backend unit/API tests (`pytest`, `backend/tests`) | **39 passed** (includes new `tests/test_auth.py` — 16 auth tests: strict DOB formats, email format enforcement, login, `/me`, seats, access control, change-password flow) |
+| Backend unit/API tests (`pytest`, `backend/tests`) | **43 passed** — `tests/test_auth.py` (16 auth tests: strict DOB formats, email enforcement, login, `/me`, seats, access control, change-password) + `tests/test_upload_dob.py` (4: upload overwrite, no-DOB duplicate, invalid DOB rejection, backfill determinism) + existing suites |
 | Live E2E smoke test against running server | **34/34 passed** (faculty login, format rejections, student login, seat view, 403/401 guards, password change + restore) |
 | Frontend lint (`oxlint`) | **0 warnings, 0 errors** |
 | Frontend build (`tsc -b && vite build`) | **Passes** |
@@ -122,5 +141,5 @@ Test infrastructure: `backend/tests/conftest.py` now owns a shared in-memory DB 
 ### How to test manually
 
 1. **Faculty:** open `/login` → *Faculty & Staff* tab → `acoe@jerusalemengg.ac.in` / `acoe@123` → you are prompted (amber *Set Password* button) to change the password.
-2. **Student:** upload the candidate register template **with the Date of Birth column** (or re-upload for existing students to fill missing DOBs) → `/login` → *Student* tab → register number + DOB in `DD/MM/YYYY` → shows only their exam hall/seat.
+2. **Student:** all 160 students already have sample DOBs (backfilled) — `/login` → *Student* tab → e.g. `2403310910421001` + `15/08/2005` → shows only their exam hall/seat. When real dates arrive, re-upload the register with the Date of Birth column (existing DOBs are overwritten) or run `backend/scripts/backfill_dob.py --input real_dobs.csv`.
 3. Try a wrong DOB format (`2005-08-15`, `15-08-2005`) or a non-institutional email — both are rejected.
