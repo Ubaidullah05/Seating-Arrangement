@@ -40,6 +40,10 @@ The first Vercel + Neon deployment came up with **empty floors/classrooms** (fac
 | Local API | `GET /api/v1/classrooms/floors` → 6 floors; `floor 5 VH: VH1,VH2,VH3` |
 | Deploy path | Importing `backend.app.main` (what Vercel's function does) already self-seeded the local PG — same code path runs on Neon at next deploy/cold start |
 
+### 5. Mobile login — DOB slashes auto-inserted
+
+The student DOB field used `inputMode="numeric"`, so phones showed a **digits-only keypad with no `/` key** while validation demanded `DD/MM/YYYY` — impossible to complete on mobile. `LoginPage.tsx` now runs `formatDob()`: digits typed are auto-formatted to `DD/MM/YYYY` (slash appears after the 2nd and 4th digit), backspace never sticks on an auto-slash, and pasted dates are re-normalized — the number pad stays (ideal for DOB) because the user never needs the `/` key. Desktop typing still works identically.
+
 > The deployed Neon DB needs **no manual migration** — the pushed startup seed creates the floors/rooms (and VH3) on the function's next cold start after Vercel finishes the redeploy.
 
 ---

@@ -31,6 +31,14 @@ function isValidDob(value: string): boolean {
   );
 }
 
+function formatDob(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  let formatted = digits.slice(0, 2);
+  if (digits.length > 2) formatted += `/${digits.slice(2, 4)}`;
+  if (digits.length > 4) formatted += `/${digits.slice(4, 8)}`;
+  return formatted;
+}
+
 export const LoginPage: React.FC = () => {
   const [tab, setTab] = useState<Tab>("student");
   const [registerNo, setRegisterNo] = useState("");
@@ -173,7 +181,7 @@ export const LoginPage: React.FC = () => {
                 placeholder="DD/MM/YYYY"
                 value={dob}
                 onChange={(e) => {
-                  setDob(e.target.value.replace(/[^\d/]/g, ""));
+                  setDob(formatDob(e.target.value));
                   resetError();
                 }}
               />
