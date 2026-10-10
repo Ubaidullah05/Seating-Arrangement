@@ -4,7 +4,8 @@ import type {
   StudentCreate, LoginResponse, StudentSeat
 } from "../types";
 
-const API_BASE = "http://127.0.0.1:8000/api/v1";
+const API_BASE = `${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"
+  }/api/v1`;
 const AUTH_STORAGE_KEY = "jce_auth";
 
 function getStoredToken(): string | null {
@@ -74,14 +75,14 @@ export const api = {
   getMySeats: (): Promise<StudentSeat[]> => request<StudentSeat[]>("/auth/student/seats"),
 
   // Dashboard
-  getDashboardStats: (): Promise<DashboardStats> => 
+  getDashboardStats: (): Promise<DashboardStats> =>
     request<DashboardStats>("/allocations/dashboard-stats"),
 
   // Classrooms & Floors
-  getFloors: (): Promise<Floor[]> => 
+  getFloors: (): Promise<Floor[]> =>
     request<Floor[]>("/classrooms/floors"),
 
-  updateClassroom: (id: number, data: { rows_per_column?: number; is_active?: boolean }): Promise<Classroom> => 
+  updateClassroom: (id: number, data: { rows_per_column?: number; is_active?: boolean }): Promise<Classroom> =>
     request<Classroom>(`/classrooms/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -103,14 +104,14 @@ export const api = {
     return res.json();
   },
 
-  commitStudents: (students: StudentCreate[]): Promise<{ message: string; imported_count: number }> => 
+  commitStudents: (students: StudentCreate[]): Promise<{ message: string; imported_count: number }> =>
     request("/students/commit-upload", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ students }),
     }),
 
-  clearAllStudents: (): Promise<{ message: string }> => 
+  clearAllStudents: (): Promise<{ message: string }> =>
     request("/students/all", { method: "DELETE" }),
 
   searchStudents: (query: string, examId?: number | null): Promise<StudentSearchResult[]> => {
@@ -120,7 +121,7 @@ export const api = {
   },
 
   // Exams
-  getExams: (): Promise<Exam[]> => 
+  getExams: (): Promise<Exam[]> =>
     request<Exam[]>("/exams"),
 
   // Allocation
@@ -130,17 +131,17 @@ export const api = {
     session: string;
     seed?: number | null;
     reshuffle?: boolean;
-  }): Promise<{ message: string; exam_id: number; exam_name: string; allocated_count: number; seed: number }> => 
+  }): Promise<{ message: string; exam_id: number; exam_name: string; allocated_count: number; seed: number }> =>
     request("/allocations/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),
     }),
 
-  getRoomPlan: (examId: number, classroomId: number): Promise<RoomSeatingPlan> => 
+  getRoomPlan: (examId: number, classroomId: number): Promise<RoomSeatingPlan> =>
     request<RoomSeatingPlan>(`/allocations/room-plan?exam_id=${examId}&classroom_id=${classroomId}`),
 
-  getNoticeBoard: (examId: number): Promise<NoticeBoardResponse> => 
+  getNoticeBoard: (examId: number): Promise<NoticeBoardResponse> =>
     request<NoticeBoardResponse>(`/allocations/notice-board?exam_id=${examId}`),
 
   // Export URLs
