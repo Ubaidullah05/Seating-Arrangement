@@ -7,6 +7,7 @@ sys.path.insert(0, str(backend_dir.parent))
 
 from backend.app.database import engine, Base, SessionLocal
 from backend.app.models import Floor, Classroom, Student, Exam, Allocation
+from backend.app.room_seed import FLOORS_SPEC, ROOM_COLUMNS, ROOM_ROWS_PER_COLUMN
 
 def seed_database(target_students: int = 924, force: bool = False):
     print("Checking and creating database tables...")
@@ -14,16 +15,7 @@ def seed_database(target_students: int = 924, force: bool = False):
     db = SessionLocal()
 
     try:
-        floors_spec = [
-            (0, "Ground Floor", ["M001", "M002", "M003", "M004", "M005", "M006", "M007", "M008"]),
-            (1, "First Floor", ["M101", "M102", "M103", "M104", "M105", "M106", "M107", "M108"]),
-            (2, "Second Floor", ["M201", "M202", "M203", "M204", "M205", "M206", "M207", "M208"]),
-            (3, "Third Floor", ["M301", "M302", "M303", "M304", "M305"]),
-            (4, "LS", ["LS1"]),
-            (5, "VH", ["VH1", "VH2"]),
-        ]
-
-        for floor_num, floor_name, room_names in floors_spec:
+        for floor_num, floor_name, room_names in FLOORS_SPEC:
             floor = db.query(Floor).filter(Floor.floor_number == floor_num).first()
             if not floor:
                 floor = Floor(name=floor_name, floor_number=floor_num)
@@ -37,8 +29,8 @@ def seed_database(target_students: int = 924, force: bool = False):
                     room = Classroom(
                         floor_id=floor.id,
                         name=r_name,
-                        columns=4,
-                        rows_per_column=7,
+                        columns=ROOM_COLUMNS,
+                        rows_per_column=ROOM_ROWS_PER_COLUMN,
                         is_active=True
                     )
                     db.add(room)

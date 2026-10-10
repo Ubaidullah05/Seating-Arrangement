@@ -4,6 +4,46 @@ Track of all changes made to the Exam Seating Planner (Jerusalem College of Engi
 
 ---
 
+## 2026-10-10 — Deploy Fix: Automatic Room Seeding & New Hall VH3
+
+### Overview
+
+The first Vercel + Neon deployment came up with **empty floors/classrooms** (faculty login and student upload worked — they only touch `faculty_users`/`students` — but the Rooms page showed nothing and generating a plan for the 510 uploaded students failed with *insufficient seating capacity*). Root cause: a fresh database only ever receives `create_all` + the faculty bootstrap at startup — **nothing seeded the rooms**. Fixed with startup self-seeding plus the requested **VH3** hall.
+
+### 1. Diagnosis (deployed site)
+
+| Observation | Meaning |
+|---|---|
+| Faculty login works on the live site | Backend function + `DATABASE_URL` reach Neon; ACOE account is auto-bootstrapped at import |
+| 510 students import fine | `students` table works |
+| Rooms page empty, generate → *insufficient seating capacity* | `floors`/`classrooms` tables were **empty** — never seeded (local rooms came from a one-time historical seed, not from app startup) |
+
+### 2. Fix — startup room self-seed
+
+| Item | Details |
+|---|---|
+| New `backend/app/room_seed.py` | `FLOORS_SPEC` (single source of truth: 6 floors, **33 rooms** × 4 cols × 7 rows = **924 seats**) + `ensure_rooms(db)` — creates only *missing* floors/rooms, never touches students/exams/allocations, never edits existing rows, one transaction (all-or-nothing), idempotent |
+| `backend/app/main.py` | Runs `ensure_rooms` at import after `create_all`, before faculty bootstrap — a **fresh database self-heals on first cold start** (guarded by try/except; unique keys on `floor_number`/`name` make concurrent cold starts safe) |
+| `backend/seed_data.py` | Now imports `FLOORS_SPEC` / `ROOM_COLUMNS` / `ROOM_ROWS_PER_COLUMN` instead of duplicating the layout (its destructive demo-student path is untouched and was **not** used for the deploy — it would wipe live students) |
+
+### 3. New hall VH3
+
+- Spec now `(5, "VH", ["VH1", "VH2", "VH3"])` → **VH floor has VH1, VH2, VH3** (each 4×7, 28 seats).
+- Inserted into the local **PostgreSQL** and the **SQLite backup** (both now: 6 floors, 33 rooms — the `924 students = 33 classrooms x 28` comment in `seed_data.py` is now actually true).
+- Totals: **33 rooms / 924 seats** → the 510-student deploy fits with room to spare.
+
+### 4. Testing (this round)
+
+| Check | Result |
+|---|---|
+| `backend` → `pytest` | **62 passed** (59 old + 3 new in `tests/test_room_seed.py`: full-spec creation incl. VH3, idempotency + student rows untouched, missing-only fill with existing rows never edited) |
+| Local API | `GET /api/v1/classrooms/floors` → 6 floors; `floor 5 VH: VH1,VH2,VH3` |
+| Deploy path | Importing `backend.app.main` (what Vercel's function does) already self-seeded the local PG — same code path runs on Neon at next deploy/cold start |
+
+> The deployed Neon DB needs **no manual migration** — the pushed startup seed creates the floors/rooms (and VH3) on the function's next cold start after Vercel finishes the redeploy.
+
+---
+
 ## 2026-10-09 (later) — PostgreSQL, Required DOB Uploads, 13/16-Digit Registers & New Halls
 
 ### Overview

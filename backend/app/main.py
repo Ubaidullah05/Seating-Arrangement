@@ -8,6 +8,7 @@ from sqlalchemy import inspect, text
 
 from backend.app.config import CORS_ORIGINS
 from backend.app.database import engine, Base, SessionLocal
+from backend.app.room_seed import ensure_rooms
 from backend.app.routers import students, classrooms, exams, allocations, export, auth
 
 logging.basicConfig(level=logging.INFO)
@@ -30,6 +31,18 @@ try:
         logger.info("Added missing students.dob column.")
 except Exception as e:
     logger.warning(f"Schema self-heal note: {e}")
+
+# Self-seed default floors & classrooms on a fresh database (e.g. first deploy)
+try:
+    _rooms_db = SessionLocal()
+    try:
+        _created_rooms = ensure_rooms(_rooms_db)
+        if _created_rooms:
+            logger.info(f"Room self-seed created {_created_rooms} floor/classroom records.")
+    finally:
+        _rooms_db.close()
+except Exception as e:
+    logger.warning(f"Room self-seed note: {e}")
 
 # Bootstrap the default ACOE faculty account (acoe@jerusalemengg.ac.in / acoe@123)
 try:
